@@ -2,11 +2,9 @@
 Below are instructions for downloading and formatting the pig reference genome and transcriptome for downstream use. 
 
 ## 1. Download fasta and GTF from Ensembl
-dna\
-`wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz`
-cdna\
-`wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/cdna/Sus_scrofa.Sscrofa11.1.cdna.all.fa.gz`
-annotation\
+
+`wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz`\
+`wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/cdna/Sus_scrofa.Sscrofa11.1.cdna.all.fa.gz`\
 `wget http://ftp.ensembl.org/pub/release-107/gtf/sus_scrofa/Sus_scrofa.Sscrofa11.1.107.gtf.gz`
 
 Unzip the files.\
@@ -37,7 +35,11 @@ KEY:\
 --genomeDir /path/to/genomeDir specifies where the genome indices are stored. Note needs to be made prior to this step\ 
 
 Now we will make the kallisto transcriptome index.\
-
+`kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa`\
+KEY:\
+index Builds a kallisto index\ 
+-i specifes the specifies the name of the output\ 
+cdna.transcripts.fasta input file\
 
 
 
