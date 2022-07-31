@@ -1,0 +1,664 @@
+{
+    "Commment_Input_Output_Directories": "This section specifies the input and output directories for scripts",
+    "rawReads" : "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+    "rawQC" : "../../rawQC/",
+    "trimmedReads" : "../../trimmedReads/",
+    "trimmedQC" : "../../trimmedQC/",
+    "starAligned" : "../../starAligned/",
+    "bamstats" : "../../bamstats/",
+    "featureCounts" : "../../featureCounts/",
+    "kallisto" : "../../kallisto/",
+
+
+    "Comment_Reference" : "This section specifies the location of the Sus scrofa, Ensembl reference genome",
+    "Sscrofa.Ymasked.fa" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask",
+    "Scrofa.cdna.Ymasked.fa" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sus_scrofa.Sscrofa11.1.cdna.all.Ymask",
+    "Sscrofa.fa" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sscrofa11.1.dna.toplevel",
+    "Sscrofa.gtf" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sus_scrofa.Sscrofa11.1.107",
+    "star_ref_index" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sus_scrofa.Sscrofa11.1.dna.toplevel_star_Ymask",
+    "kallisto_ref_index" : "/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto",
+
+    "Comment_Sample_Info": "The following section lists the samples that are to be analyzed",
+    "sample_names": ['1_2_Brain_S77_L002', '10_4_Kidney_S82_L002', '11_4_BB_S105_L002', '12_4_FB_S106_L002', '17_6_Brain_S83_L002', '18_6_Kidney_S84_L002', '19_6_BB_S107_L002', '2_2_Kidney_S78_L002', '20_6_FB_S108_L002', '21_7_Brain_S85_L002', '22_7_Kidney_S86_L002', '23_7_BB_S109_L002', '24_7_FB_S110_L002', '25_8_Brain_S87_L002', '26_8_Kidney_S88_L002', '27_8_BB_S111_L002', '28_8_FB_S112_L002', '3_2_BB_S101_L002', '32_10_Brain_S15_L002', '32_10_Brain_S91_L002', '33_10_Kidney_S92_L002', '34_10_BB_S114_L002', '34_10_BB_S20_L002', '35_10_FB_S115_L002', '35_10_FB_S21_L002', '36_11_Brain_S16_L002', '36_11_Brain_S93_L002', '37_11_Kidney_S94_L002', '38_11_BB_S116_L002', '38_11_BB_S22_L002', '39_11_FB_S117_L002', '4_2_FB_S102_L002', '40_12_Brain_S17_L002', '40_12_Brain_S95_L002', '41_12_Kidney_S96_L002', '42_12_BB_S118_L002', '43_12_FB_S120_L002', '47_14_Brain_S99_L002', '48_14_Kidney_S100_L002', '49_14_BB_S121_L002', '5_3_Brain_S79_L002', '50_14_FB_S122_L002', '50_14_FB_S24_L002', '6_3_Kidney_S80_L002', '7_3_BB_S103_L002', '8_3_FB_S104_L002', '8_3_FB_S19_L002', '9_4_Brain_S14_L002', '9_4_Brain_S81_L002'],
+    "brain_names": ['1_2_Brain_S77_L002', '17_6_Brain_S83_L002', '21_7_Brain_S85_L002', '25_8_Brain_S87_L002', '32_10_Brain_S15_L002', '32_10_Brain_S91_L002', '36_11_Brain_S16_L002', '36_11_Brain_S93_L002', '40_12_Brain_S17_L002', '40_12_Brain_S95_L002', '47_14_Brain_S99_L002', '5_3_Brain_S79_L002', '9_4_Brain_S14_L002', '9_4_Brain_S81_L002'],
+    "kidney_names": ['10_4_Kidney_S82_L002', '18_6_Kidney_S84_L002', '2_2_Kidney_S78_L002', '22_7_Kidney_S86_L002', '26_8_Kidney_S88_L002', '33_10_Kidney_S92_L002', '37_11_Kidney_S94_L002', '41_12_Kidney_S96_L002', '48_14_Kidney_S100_L002', '6_3_Kidney_S80_L002'],
+    "blood_names": ['11_4_BB_S105_L002', '12_4_FB_S106_L002', '19_6_BB_S107_L002', '20_6_FB_S108_L002', '23_7_BB_S109_L002', '24_7_FB_S110_L002', '27_8_BB_S111_L002', '28_8_FB_S112_L002', '3_2_BB_S101_L002', '34_10_BB_S114_L002', '34_10_BB_S20_L002', '35_10_FB_S115_L002', '35_10_FB_S21_L002', '38_11_BB_S116_L002', '38_11_BB_S22_L002', '39_11_FB_S117_L002', '4_2_FB_S102_L002', '42_12_BB_S118_L002', '43_12_FB_S120_L002', '49_14_BB_S121_L002', '50_14_FB_S122_L002', '50_14_FB_S24_L002', '7_3_BB_S103_L002', '8_3_FB_S104_L002', '8_3_FB_S19_L002'],
+    "read": ['R1', 'R2'],
+
+    "1_2_Brain_S77_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "1-2-Brain_187_006_S77_L002_R1_001",
+        "fq2": "1-2-Brain_187_006_S77_L002_R2_001",
+        "shortName1": "1_2_Brain_S77_L002_R1",
+        "shortName2": "1_2_Brain_S77_L002_R2",
+        "ID": "1_2_Brain_S77_L002",
+        "SM": "1_2_Brain_S77_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "1_2_Brain_S77_L002",
+        "PL": "Illumina"
+        },
+
+    "10_4_Kidney_S82_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "10-4-Kidney_127_066_S82_L002_R1_001",
+        "fq2": "10-4-Kidney_127_066_S82_L002_R2_001",
+        "shortName1": "10_4_Kidney_S82_L002_R1",
+        "shortName2": "10_4_Kidney_S82_L002_R2",
+        "ID": "10_4_Kidney_S82_L002",
+        "SM": "10_4_Kidney_S82_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "10_4_Kidney_S82_L002",
+        "PL": "Illumina"
+        },
+
+    "11_4_BB_S105_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "11-4_BB_041_152_S105_L002_R1_001",
+        "fq2": "11-4_BB_041_152_S105_L002_R2_001",
+        "shortName1": "11_4_BB_S105_L002_R1",
+        "shortName2": "11_4_BB_S105_L002_R2",
+        "ID": "11_4_BB_S105_L002",
+        "SM": "11_4_BB_S105_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "11_4_BB_S105_L002",
+        "PL": "Illumina"
+        },
+
+    "12_4_FB_S106_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "12-4_FB_029_164_S106_L002_R1_001",
+        "fq2": "12-4_FB_029_164_S106_L002_R2_001",
+        "shortName1": "12_4_FB_S106_L002_R1",
+        "shortName2": "12_4_FB_S106_L002_R2",
+        "ID": "12_4_FB_S106_L002",
+        "SM": "12_4_FB_S106_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "12_4_FB_S106_L002",
+        "PL": "Illumina"
+        },
+
+    "17_6_Brain_S83_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "17-6-Brain_115_078_S83_L002_R1_001",
+        "fq2": "17-6-Brain_115_078_S83_L002_R2_001",
+        "shortName1": "17_6_Brain_S83_L002_R1",
+        "shortName2": "17_6_Brain_S83_L002_R2",
+        "ID": "17_6_Brain_S83_L002",
+        "SM": "17_6_Brain_S83_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "17_6_Brain_S83_L002",
+        "PL": "Illumina"
+        },
+
+    "18_6_Kidney_S84_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "18-6-Kidney_103_090_S84_L002_R1_001",
+        "fq2": "18-6-Kidney_103_090_S84_L002_R2_001",
+        "shortName1": "18_6_Kidney_S84_L002_R1",
+        "shortName2": "18_6_Kidney_S84_L002_R2",
+        "ID": "18_6_Kidney_S84_L002",
+        "SM": "18_6_Kidney_S84_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "18_6_Kidney_S84_L002",
+        "PL": "Illumina"
+        },
+
+    "19_6_BB_S107_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "19-6_BB_017_176_S107_L002_R1_001",
+        "fq2": "19-6_BB_017_176_S107_L002_R2_001",
+        "shortName1": "19_6_BB_S107_L002_R1",
+        "shortName2": "19_6_BB_S107_L002_R2",
+        "ID": "19_6_BB_S107_L002",
+        "SM": "19_6_BB_S107_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "19_6_BB_S107_L002",
+        "PL": "Illumina"
+        },
+
+    "2_2_Kidney_S78_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "2-2-Kidney_175_018_S78_L002_R1_001",
+        "fq2": "2-2-Kidney_175_018_S78_L002_R2_001",
+        "shortName1": "2_2_Kidney_S78_L002_R1",
+        "shortName2": "2_2_Kidney_S78_L002_R2",
+        "ID": "2_2_Kidney_S78_L002",
+        "SM": "2_2_Kidney_S78_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "2_2_Kidney_S78_L002",
+        "PL": "Illumina"
+        },
+
+    "20_6_FB_S108_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "20-6_FB_005_188_S108_L002_R1_001",
+        "fq2": "20-6_FB_005_188_S108_L002_R2_001",
+        "shortName1": "20_6_FB_S108_L002_R1",
+        "shortName2": "20_6_FB_S108_L002_R2",
+        "ID": "20_6_FB_S108_L002",
+        "SM": "20_6_FB_S108_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "20_6_FB_S108_L002",
+        "PL": "Illumina"
+        },
+
+    "21_7_Brain_S85_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "21-7-Brain_186_007_S85_L002_R1_001",
+        "fq2": "21-7-Brain_186_007_S85_L002_R2_001",
+        "shortName1": "21_7_Brain_S85_L002_R1",
+        "shortName2": "21_7_Brain_S85_L002_R2",
+        "ID": "21_7_Brain_S85_L002",
+        "SM": "21_7_Brain_S85_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "21_7_Brain_S85_L002",
+        "PL": "Illumina"
+        },
+
+    "22_7_Kidney_S86_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "22-7-Kidney_174_019_S86_L002_R1_001",
+        "fq2": "22-7-Kidney_174_019_S86_L002_R2_001",
+        "shortName1": "22_7_Kidney_S86_L002_R1",
+        "shortName2": "22_7_Kidney_S86_L002_R2",
+        "ID": "22_7_Kidney_S86_L002",
+        "SM": "22_7_Kidney_S86_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "22_7_Kidney_S86_L002",
+        "PL": "Illumina"
+        },
+
+    "23_7_BB_S109_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "23-7_BB_088_105_S109_L002_R1_001",
+        "fq2": "23-7_BB_088_105_S109_L002_R2_001",
+        "shortName1": "23_7_BB_S109_L002_R1",
+        "shortName2": "23_7_BB_S109_L002_R2",
+        "ID": "23_7_BB_S109_L002",
+        "SM": "23_7_BB_S109_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "23_7_BB_S109_L002",
+        "PL": "Illumina"
+        },
+
+    "24_7_FB_S110_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "24-7_FB_076_117_S110_L002_R1_001",
+        "fq2": "24-7_FB_076_117_S110_L002_R2_001",
+        "shortName1": "24_7_FB_S110_L002_R1",
+        "shortName2": "24_7_FB_S110_L002_R2",
+        "ID": "24_7_FB_S110_L002",
+        "SM": "24_7_FB_S110_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "24_7_FB_S110_L002",
+        "PL": "Illumina"
+        },
+
+    "25_8_Brain_S87_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "25-8-Brain_162_031_S87_L002_R1_001",
+        "fq2": "25-8-Brain_162_031_S87_L002_R2_001",
+        "shortName1": "25_8_Brain_S87_L002_R1",
+        "shortName2": "25_8_Brain_S87_L002_R2",
+        "ID": "25_8_Brain_S87_L002",
+        "SM": "25_8_Brain_S87_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "25_8_Brain_S87_L002",
+        "PL": "Illumina"
+        },
+
+    "26_8_Kidney_S88_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "26-8-Kidney_150_043_S88_L002_R1_001",
+        "fq2": "26-8-Kidney_150_043_S88_L002_R2_001",
+        "shortName1": "26_8_Kidney_S88_L002_R1",
+        "shortName2": "26_8_Kidney_S88_L002_R2",
+        "ID": "26_8_Kidney_S88_L002",
+        "SM": "26_8_Kidney_S88_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "26_8_Kidney_S88_L002",
+        "PL": "Illumina"
+        },
+
+    "27_8_BB_S111_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "27-8-BB_064_129_S111_L002_R1_001",
+        "fq2": "27-8-BB_064_129_S111_L002_R2_001",
+        "shortName1": "27_8_BB_S111_L002_R1",
+        "shortName2": "27_8_BB_S111_L002_R2",
+        "ID": "27_8_BB_S111_L002",
+        "SM": "27_8_BB_S111_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "27_8_BB_S111_L002",
+        "PL": "Illumina"
+        },
+
+    "28_8_FB_S112_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "28-8-FB_052_141_S112_L002_R1_001",
+        "fq2": "28-8-FB_052_141_S112_L002_R2_001",
+        "shortName1": "28_8_FB_S112_L002_R1",
+        "shortName2": "28_8_FB_S112_L002_R2",
+        "ID": "28_8_FB_S112_L002",
+        "SM": "28_8_FB_S112_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "28_8_FB_S112_L002",
+        "PL": "Illumina"
+        },
+
+    "3_2_BB_S101_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "3-2_BB_089_104_S101_L002_R1_001",
+        "fq2": "3-2_BB_089_104_S101_L002_R2_001",
+        "shortName1": "3_2_BB_S101_L002_R1",
+        "shortName2": "3_2_BB_S101_L002_R2",
+        "ID": "3_2_BB_S101_L002",
+        "SM": "3_2_BB_S101_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "3_2_BB_S101_L002",
+        "PL": "Illumina"
+        },
+
+    "32_10_Brain_S15_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "32-10-Brain_114_079_S15_L002_R1_001",
+        "fq2": "32-10-Brain_114_079_S15_L002_R2_001",
+        "shortName1": "32_10_Brain_S15_L002_R1",
+        "shortName2": "32_10_Brain_S15_L002_R2",
+        "ID": "32_10_Brain_S15_L002",
+        "SM": "32_10_Brain_S15_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "32_10_Brain_S15_L002",
+        "PL": "Illumina"
+        },
+
+    "32_10_Brain_S91_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "32-10-Brain_114_079_S91_L002_R1_001",
+        "fq2": "32-10-Brain_114_079_S91_L002_R2_001",
+        "shortName1": "32_10_Brain_S91_L002_R1",
+        "shortName2": "32_10_Brain_S91_L002_R2",
+        "ID": "32_10_Brain_S91_L002",
+        "SM": "32_10_Brain_S91_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "32_10_Brain_S91_L002",
+        "PL": "Illumina"
+        },
+
+    "33_10_Kidney_S92_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "33-10-Kidney_102_091_S92_L002_R1_001",
+        "fq2": "33-10-Kidney_102_091_S92_L002_R2_001",
+        "shortName1": "33_10_Kidney_S92_L002_R1",
+        "shortName2": "33_10_Kidney_S92_L002_R2",
+        "ID": "33_10_Kidney_S92_L002",
+        "SM": "33_10_Kidney_S92_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "33_10_Kidney_S92_L002",
+        "PL": "Illumina"
+        },
+
+    "34_10_BB_S114_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "34-10-BB_028_165_S114_L002_R1_001",
+        "fq2": "34-10-BB_028_165_S114_L002_R2_001",
+        "shortName1": "34_10_BB_S114_L002_R1",
+        "shortName2": "34_10_BB_S114_L002_R2",
+        "ID": "34_10_BB_S114_L002",
+        "SM": "34_10_BB_S114_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "34_10_BB_S114_L002",
+        "PL": "Illumina"
+        },
+
+    "34_10_BB_S20_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "34-10-BB_028_165_S20_L002_R1_001",
+        "fq2": "34-10-BB_028_165_S20_L002_R2_001",
+        "shortName1": "34_10_BB_S20_L002_R1",
+        "shortName2": "34_10_BB_S20_L002_R2",
+        "ID": "34_10_BB_S20_L002",
+        "SM": "34_10_BB_S20_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "34_10_BB_S20_L002",
+        "PL": "Illumina"
+        },
+
+    "35_10_FB_S115_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "35-10-FB_016_177_S115_L002_R1_001",
+        "fq2": "35-10-FB_016_177_S115_L002_R2_001",
+        "shortName1": "35_10_FB_S115_L002_R1",
+        "shortName2": "35_10_FB_S115_L002_R2",
+        "ID": "35_10_FB_S115_L002",
+        "SM": "35_10_FB_S115_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "35_10_FB_S115_L002",
+        "PL": "Illumina"
+        },
+
+    "35_10_FB_S21_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "35-10-FB_016_177_S21_L002_R1_001",
+        "fq2": "35-10-FB_016_177_S21_L002_R2_001",
+        "shortName1": "35_10_FB_S21_L002_R1",
+        "shortName2": "35_10_FB_S21_L002_R2",
+        "ID": "35_10_FB_S21_L002",
+        "SM": "35_10_FB_S21_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "35_10_FB_S21_L002",
+        "PL": "Illumina"
+        },
+
+    "36_11_Brain_S16_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "36-11-Brain_185_008_S16_L002_R1_001",
+        "fq2": "36-11-Brain_185_008_S16_L002_R2_001",
+        "shortName1": "36_11_Brain_S16_L002_R1",
+        "shortName2": "36_11_Brain_S16_L002_R2",
+        "ID": "36_11_Brain_S16_L002",
+        "SM": "36_11_Brain_S16_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "36_11_Brain_S16_L002",
+        "PL": "Illumina"
+        },
+
+    "36_11_Brain_S93_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "36-11-Brain_185_008_S93_L002_R1_001",
+        "fq2": "36-11-Brain_185_008_S93_L002_R2_001",
+        "shortName1": "36_11_Brain_S93_L002_R1",
+        "shortName2": "36_11_Brain_S93_L002_R2",
+        "ID": "36_11_Brain_S93_L002",
+        "SM": "36_11_Brain_S93_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "36_11_Brain_S93_L002",
+        "PL": "Illumina"
+        },
+
+    "37_11_Kidney_S94_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "37-11-Kidney_173_020_S94_L002_R1_001",
+        "fq2": "37-11-Kidney_173_020_S94_L002_R2_001",
+        "shortName1": "37_11_Kidney_S94_L002_R1",
+        "shortName2": "37_11_Kidney_S94_L002_R2",
+        "ID": "37_11_Kidney_S94_L002",
+        "SM": "37_11_Kidney_S94_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "37_11_Kidney_S94_L002",
+        "PL": "Illumina"
+        },
+
+    "38_11_BB_S116_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "38-11-BB_004_189_S116_L002_R1_001",
+        "fq2": "38-11-BB_004_189_S116_L002_R2_001",
+        "shortName1": "38_11_BB_S116_L002_R1",
+        "shortName2": "38_11_BB_S116_L002_R2",
+        "ID": "38_11_BB_S116_L002",
+        "SM": "38_11_BB_S116_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "38_11_BB_S116_L002",
+        "PL": "Illumina"
+        },
+
+    "38_11_BB_S22_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "38-11-BB_004_189_S22_L002_R1_001",
+        "fq2": "38-11-BB_004_189_S22_L002_R2_001",
+        "shortName1": "38_11_BB_S22_L002_R1",
+        "shortName2": "38_11_BB_S22_L002_R2",
+        "ID": "38_11_BB_S22_L002",
+        "SM": "38_11_BB_S22_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "38_11_BB_S22_L002",
+        "PL": "Illumina"
+        },
+
+    "39_11_FB_S117_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "39-11-FB_087_106_S117_L002_R1_001",
+        "fq2": "39-11-FB_087_106_S117_L002_R2_001",
+        "shortName1": "39_11_FB_S117_L002_R1",
+        "shortName2": "39_11_FB_S117_L002_R2",
+        "ID": "39_11_FB_S117_L002",
+        "SM": "39_11_FB_S117_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "39_11_FB_S117_L002",
+        "PL": "Illumina"
+        },
+
+    "4_2_FB_S102_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "4-2_FB_077_116_S102_L002_R1_001",
+        "fq2": "4-2_FB_077_116_S102_L002_R2_001",
+        "shortName1": "4_2_FB_S102_L002_R1",
+        "shortName2": "4_2_FB_S102_L002_R2",
+        "ID": "4_2_FB_S102_L002",
+        "SM": "4_2_FB_S102_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "4_2_FB_S102_L002",
+        "PL": "Illumina"
+        },
+
+    "40_12_Brain_S17_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "40-12-Brain_161_032_S17_L002_R1_001",
+        "fq2": "40-12-Brain_161_032_S17_L002_R2_001",
+        "shortName1": "40_12_Brain_S17_L002_R1",
+        "shortName2": "40_12_Brain_S17_L002_R2",
+        "ID": "40_12_Brain_S17_L002",
+        "SM": "40_12_Brain_S17_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "40_12_Brain_S17_L002",
+        "PL": "Illumina"
+        },
+
+    "40_12_Brain_S95_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "40-12-Brain_161_032_S95_L002_R1_001",
+        "fq2": "40-12-Brain_161_032_S95_L002_R2_001",
+        "shortName1": "40_12_Brain_S95_L002_R1",
+        "shortName2": "40_12_Brain_S95_L002_R2",
+        "ID": "40_12_Brain_S95_L002",
+        "SM": "40_12_Brain_S95_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "40_12_Brain_S95_L002",
+        "PL": "Illumina"
+        },
+
+    "41_12_Kidney_S96_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "41-12-Kidney_149_044_S96_L002_R1_001",
+        "fq2": "41-12-Kidney_149_044_S96_L002_R2_001",
+        "shortName1": "41_12_Kidney_S96_L002_R1",
+        "shortName2": "41_12_Kidney_S96_L002_R2",
+        "ID": "41_12_Kidney_S96_L002",
+        "SM": "41_12_Kidney_S96_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "41_12_Kidney_S96_L002",
+        "PL": "Illumina"
+        },
+
+    "42_12_BB_S118_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "42-12-BB_075_118_S118_L002_R1_001",
+        "fq2": "42-12-BB_075_118_S118_L002_R2_001",
+        "shortName1": "42_12_BB_S118_L002_R1",
+        "shortName2": "42_12_BB_S118_L002_R2",
+        "ID": "42_12_BB_S118_L002",
+        "SM": "42_12_BB_S118_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "42_12_BB_S118_L002",
+        "PL": "Illumina"
+        },
+
+    "43_12_FB_S120_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "43-12-FB_051_142_S120_L002_R1_001",
+        "fq2": "43-12-FB_051_142_S120_L002_R2_001",
+        "shortName1": "43_12_FB_S120_L002_R1",
+        "shortName2": "43_12_FB_S120_L002_R2",
+        "ID": "43_12_FB_S120_L002",
+        "SM": "43_12_FB_S120_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "43_12_FB_S120_L002",
+        "PL": "Illumina"
+        },
+
+    "47_14_Brain_S99_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "47-14-Brain_113_080_S99_L002_R1_001",
+        "fq2": "47-14-Brain_113_080_S99_L002_R2_001",
+        "shortName1": "47_14_Brain_S99_L002_R1",
+        "shortName2": "47_14_Brain_S99_L002_R2",
+        "ID": "47_14_Brain_S99_L002",
+        "SM": "47_14_Brain_S99_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "47_14_Brain_S99_L002",
+        "PL": "Illumina"
+        },
+
+    "48_14_Kidney_S100_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "48-14-Kidney_101_092_S100_L002_R1_001",
+        "fq2": "48-14-Kidney_101_092_S100_L002_R2_001",
+        "shortName1": "48_14_Kidney_S100_L002_R1",
+        "shortName2": "48_14_Kidney_S100_L002_R2",
+        "ID": "48_14_Kidney_S100_L002",
+        "SM": "48_14_Kidney_S100_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "48_14_Kidney_S100_L002",
+        "PL": "Illumina"
+        },
+
+    "49_14_BB_S121_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "49-14-BB_039_154_S121_L002_R1_001",
+        "fq2": "49-14-BB_039_154_S121_L002_R2_001",
+        "shortName1": "49_14_BB_S121_L002_R1",
+        "shortName2": "49_14_BB_S121_L002_R2",
+        "ID": "49_14_BB_S121_L002",
+        "SM": "49_14_BB_S121_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "49_14_BB_S121_L002",
+        "PL": "Illumina"
+        },
+
+    "5_3_Brain_S79_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "5-3-Brain_163_030_S79_L002_R1_001",
+        "fq2": "5-3-Brain_163_030_S79_L002_R2_001",
+        "shortName1": "5_3_Brain_S79_L002_R1",
+        "shortName2": "5_3_Brain_S79_L002_R2",
+        "ID": "5_3_Brain_S79_L002",
+        "SM": "5_3_Brain_S79_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "5_3_Brain_S79_L002",
+        "PL": "Illumina"
+        },
+
+    "50_14_FB_S122_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "50-14-FB_027_166_S122_L002_R1_001",
+        "fq2": "50-14-FB_027_166_S122_L002_R2_001",
+        "shortName1": "50_14_FB_S122_L002_R1",
+        "shortName2": "50_14_FB_S122_L002_R2",
+        "ID": "50_14_FB_S122_L002",
+        "SM": "50_14_FB_S122_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "50_14_FB_S122_L002",
+        "PL": "Illumina"
+        },
+
+    "50_14_FB_S24_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "50-14-FB_027_166_S24_L002_R1_001",
+        "fq2": "50-14-FB_027_166_S24_L002_R2_001",
+        "shortName1": "50_14_FB_S24_L002_R1",
+        "shortName2": "50_14_FB_S24_L002_R2",
+        "ID": "50_14_FB_S24_L002",
+        "SM": "50_14_FB_S24_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "50_14_FB_S24_L002",
+        "PL": "Illumina"
+        },
+
+    "6_3_Kidney_S80_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "6-3-Kidney_151_042_S80_L002_R1_001",
+        "fq2": "6-3-Kidney_151_042_S80_L002_R2_001",
+        "shortName1": "6_3_Kidney_S80_L002_R1",
+        "shortName2": "6_3_Kidney_S80_L002_R2",
+        "ID": "6_3_Kidney_S80_L002",
+        "SM": "6_3_Kidney_S80_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "6_3_Kidney_S80_L002",
+        "PL": "Illumina"
+        },
+
+    "7_3_BB_S103_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "7-3_BB_065_128_S103_L002_R1_001",
+        "fq2": "7-3_BB_065_128_S103_L002_R2_001",
+        "shortName1": "7_3_BB_S103_L002_R1",
+        "shortName2": "7_3_BB_S103_L002_R2",
+        "ID": "7_3_BB_S103_L002",
+        "SM": "7_3_BB_S103_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "7_3_BB_S103_L002",
+        "PL": "Illumina"
+        },
+
+    "8_3_FB_S104_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "8-3_FB_053_140_S104_L002_R1_001",
+        "fq2": "8-3_FB_053_140_S104_L002_R2_001",
+        "shortName1": "8_3_FB_S104_L002_R1",
+        "shortName2": "8_3_FB_S104_L002_R2",
+        "ID": "8_3_FB_S104_L002",
+        "SM": "8_3_FB_S104_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "8_3_FB_S104_L002",
+        "PL": "Illumina"
+        },
+
+    "8_3_FB_S19_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "8-3_FB_053_140_S19_L002_R1_001",
+        "fq2": "8-3_FB_053_140_S19_L002_R2_001",
+        "shortName1": "8_3_FB_S19_L002_R1",
+        "shortName2": "8_3_FB_S19_L002_R2",
+        "ID": "8_3_FB_S19_L002",
+        "SM": "8_3_FB_S19_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "8_3_FB_S19_L002",
+        "PL": "Illumina"
+        },
+
+    "9_4_Brain_S14_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "9-4-Brain_139_054_S14_L002_R1_001",
+        "fq2": "9-4-Brain_139_054_S14_L002_R2_001",
+        "shortName1": "9_4_Brain_S14_L002_R1",
+        "shortName2": "9_4_Brain_S14_L002_R2",
+        "ID": "9_4_Brain_S14_L002",
+        "SM": "9_4_Brain_S14_L002",
+        "PU": "HWVYCDSXY.2",
+        "LB": "9_4_Brain_S14_L002",
+        "PL": "Illumina"
+        },
+
+    "9_4_Brain_S81_L002":{
+        "fq_path": "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/bulkRNA/",
+        "fq1": "9-4-Brain_139_054_S81_L002_R1_001",
+        "fq2": "9-4-Brain_139_054_S81_L002_R2_001",
+        "shortName1": "9_4_Brain_S81_L002_R1",
+        "shortName2": "9_4_Brain_S81_L002_R2",
+        "ID": "9_4_Brain_S81_L002",
+        "SM": "9_4_Brain_S81_L002",
+        "PU": "HVNLJDSXY.2",
+        "LB": "9_4_Brain_S81_L002",
+        "PL": "Illumina"
+        }
+}
