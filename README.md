@@ -16,7 +16,8 @@ To activate the environment once installed:
 ## bulk RNAseq differential expression
 We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and SALMON, and limma/voom for computing differential expression. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
 
-To run our suggested workflow for differential expression please see bulkRNA folder. 
+`cd bulkRNA`\
+`mkdir bamstats  featureCounts  kallisto  rObjects  rawQC  rawfastq  results  starAligned  trimmedQC  trimmedReads`\
 
 ### publicly available tools used in this analysis
 Tool | usage | citation
