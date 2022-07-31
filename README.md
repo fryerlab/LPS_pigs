@@ -4,7 +4,14 @@ Bulk RNAseq of Sus scrofa (pigs) that received either saline or bacterial lipopo
 The goal of this experiment is to identify differentially expressed genes (DEGs) between experimental groups.  Pigs were injected with saline (control) or lipopolysaccharide (LPS) to model sepsis.  Brain, kidney and blood samples were collected and sent for bulk RNA sequencing.
 
 ## Set up conda environment
+This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
 
+To create the pigs environment:
+
+`conda env create -f pigs.yml`
+
+To activate the environment once installed:
+`conda activate pigs`
 
 ## bulk RNAseq differential expression
 We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and SALMON, and limma/voom for computing differential expression. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
