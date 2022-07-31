@@ -40,7 +40,13 @@ Now we will make the kallisto transcriptome index.\
 KEY:\
 index Builds a kallisto index\
 -i specifes the specifies the name of the output. 
-cdna.transcripts.fasta input file
+cdna.transcripts.fasta input file.\
+
+Build the rsem reference for downstream use.\
+First make a directory.\
+`mkdir rsem_ref`\
+run rsem prepare rerence using the gft and Ymask fasta
+`rsem-prepare-reference --gtf Sus_scrofa.Sscrofa11.1.107.gtf Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask.fa rsem_ref/`
 
 
 
