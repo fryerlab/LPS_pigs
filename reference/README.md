@@ -39,8 +39,9 @@ Now we will make the kallisto transcriptome index.\
 
 KEY:\
 index Builds a kallisto index\
--i specifes the specifies the name of the output.\ 
-cdna.transcripts.fasta input file\
+-i specifes the specifies the name of the output.
+ 
+cdna.transcripts.fasta input file
 
 
 
