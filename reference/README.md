@@ -45,7 +45,7 @@ cdna.transcripts.fasta input file.\
 Build the rsem reference for downstream use.\
 First make a directory.\
 `mkdir rsem_ref`\
-run rsem prepare rerence using the gft and Ymask fasta
+run rsem prepare rerence using the gft and Ymask fasta\
 `rsem-prepare-reference --gtf Sus_scrofa.Sscrofa11.1.107.gtf Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask.fa rsem_ref/`
 
 
