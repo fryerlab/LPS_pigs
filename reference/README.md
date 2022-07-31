@@ -20,6 +20,24 @@ All pigs in this study are XX female. We will hard mask the Y chromosome sequenc
 
 ## 3. Build index and dictionary 
 
+Remember that you will need to activate the conda environment first. 
+
+`conda activate pigs`
+
+Make a directory for storing the star reference genome outputs
+
+`mkdir Sus_scrofa.Sscrofa11.1.dna.toplevel_star_Ymask`
+
+`star --runThreadN 12 --runMode genomeGenerate --genomeDir Sus_scrofa.Sscrofa11.1.dna.toplevel_star_Ymask --genomeFastaFiles Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask.fa --sjdbGTFfile Sus_scrofa.Sscrofa11.1.107.gtf`
+
+KEY:
+..--sjdbOverhang ReadLength-1, default value of 100
+..--runThreadN # of threads
+..--runMode build genome indices (default is aligns reads)
+..--genomeFastaFiles /path/to/genome/fasta
+..--sjdbGTFfile /path/to/annotations.gtf
+..--genomeDir /path/to/genomeDir specifies where the genome indices are stored. Note needs to be made prior to this step 
+
 
 
 
