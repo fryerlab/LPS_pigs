@@ -37,10 +37,11 @@ KEY:\
 Now we will make the kallisto transcriptome index.\
 `kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa`
 
-KEY:
-index Builds a kallisto index
--i specifes the specifies the name of the output 
-cdna.transcripts.fasta input file
+KEY:\
+index Builds a kallisto index\
+-i specifes the specifies the name of the output\ 
+cdna.transcripts.fasta input file\
+\
 
 
 
