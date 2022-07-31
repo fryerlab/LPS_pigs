@@ -19,6 +19,19 @@ We have put together a workflow for inferring differential expression between sa
 ### 1. set up project directory structure
 `cd bulkRNA`\
 `mkdir bamstats  featureCounts  kallisto  rObjects  rawQC  rawfastq  results  starAligned  trimmedQC  trimmedReads`\
+`cd results`\
+`mkdir star kallisto`\
+
+### 2. align reads and generate quantification estimates
+We ran the data through two pipelines as it has been shown that most of the variation in our data can be explained by the choice of read aligner, see Olney et al. 2020. Therefore, we aligned the reads with star followed by RSEM for quantification and employed the pseudo aligner Kallisto. 
+In the snakemake pipeline, the fastq files are trimmed for quality via bbduk package. Information on the specific parameters employed for each step is explained within the snakefile. 
+
+First move to the scripts snakemake folder
+`cd LPS_pigs/bulkRNA/scripts/snakemake/`\
+Now run the snakefile. 
+`snakemake -s Snakefile`\
+To run multiple samples in parallel use -j and the number of jobs to run.\
+
 
 ### publicly available tools used in this analysis
 Tool | usage | citation

@@ -130,7 +130,6 @@ rule trim_fastqc:
 #---------------------
 #rule star alignment: 
 #---------------------
-
 rule STAR_paired:
 	input:
 		fq1_trim = (config["trimmedReads"]+"{sample}_trimmed_R1.fastq.gz"),
@@ -139,7 +138,7 @@ rule STAR_paired:
 		out_1 = (config["starAligned"]+"{sample}_STAR.bam")
 	params:
 		star = star_path,
-		STAR_Index = (config["star_ref_index"]+"_STAR/"),
+		STAR_Index = (config["star_ref_index"]),
 		STAR_GTF = (config["Sscrofa.gtf"]+".gtf"),
 	shell:
 		"""
@@ -179,7 +178,7 @@ rule STAR_bam_sort:
     input:
     	IN_BAM = (config["starAligned"]+"{sample}_STAR.bam")
     output:
-        sort_BAM = (config["starAligned"]+"{sample}_STAR_sort.bam")
+        sort_BAM = temporary(config["starAligned"]+"{sample}_STAR_sort.bam")
     shell:
         "bamtools sort -in {input.IN_BAM} -out {output.sort_BAM}"
 
@@ -194,7 +193,7 @@ rule STAR_MarkDups:
     input:
         sort_BAM = (config["starAligned"]+"{sample}_STAR_sort.bam")
     output:
-        BAM = (config["starAligned"]+"{sample}_STAR_sort_mkdup.bam"),
+        BAM = temporary(config["starAligned"]+"{sample}_STAR_sort_mkdup.bam"),
         metrics = (config["starAligned"]+"{sample}.picard_sort_mkdup_metrics.txt")
     params:
         picard = picard_path
@@ -274,5 +273,3 @@ rule STAR_stats_bam:
 #-in. input bam file
 # stats output will include number of reads mapped and number of duplicate reads.
 
-#---------------------
-# End of star.Snakefile. Proceed to R scripts for differential expression. 
