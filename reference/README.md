@@ -35,7 +35,8 @@ KEY:\
 --genomeDir /path/to/genomeDir specifies where the genome indices are stored. Note needs to be made prior to this step\ 
 
 Now we will make the kallisto transcriptome index.\
-`kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa`\
+`kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa`
+
 KEY:\
 index Builds a kallisto index\ 
 -i specifes the specifies the name of the output\ 
