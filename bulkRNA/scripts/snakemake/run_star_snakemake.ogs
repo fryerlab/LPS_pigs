@@ -18,5 +18,5 @@ CWD="/research/labs/neurology/fryer/m239830/LPS_pigs/bulkRNA/scripts/snakemake"
 cd $CWD
 
 # run snakemake
-snakemake -s star.Snakefile -j 100 --rerun-incomplete --latency-wait 20 --cluster "qsub -l h_vmem=10G -q 1-day,4-day,lg-mem -pe threaded 8"
+snakemake -s Snakefile -j 50 --rerun-incomplete --latency-wait 20 --cluster "qsub -l h_vmem=10G -q 1-day,4-day,lg-mem -pe threaded 8"
 date
