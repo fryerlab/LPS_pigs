@@ -27,11 +27,13 @@ rule all:
         	
         	
         	expand(config["starAligned"]+"{sample}_STAR.bam", sample = config["sample_names"]),
-        	expand(config["starAligned"]+"{sample}_STAR_sort.bam", sample = config["sample_names"]),    	
-        	expand(config["starAligned"]+"{sample}_STAR_sort_mkdup.bam", sample = config["sample_names"]),   	
-        	expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam", sample = config["sample_names"]),   	
-        	expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam.bai", sample = config["sample_names"]),  	
-        	expand(config["bamstats"]+"{sample}_STAR_sort_mkdup_rdgrp_stats.txt", sample = config["sample_names"])
+        	#expand(config["starAligned"]+"{sample}_STAR_sort.bam", sample = config["sample_names"]),    	
+        	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup.bam", sample = config["sample_names"]),   	
+        	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam", sample = config["sample_names"]),   	
+        	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam.bai", sample = config["sample_names"]),  	
+        	#expand(config["bamstats"]+"{sample}_STAR_sort_mkdup_rdgrp_stats.txt", sample = config["sample_names"]),
+        	expand(config["starAligned"]+"{sample}_gene_id_counts.txt", sample = config["sample_names"])
+
         	
 #---------------------
 # Reference genome and annotation were downloaded prior to running snakemake. 
@@ -272,4 +274,25 @@ rule STAR_stats_bam:
 #stats. Prints some basic statistics from input BAM file(s)
 #-in. input bam file
 # stats output will include number of reads mapped and number of duplicate reads.
+
+#---------------------
+#rule reformat counts: 
+#---------------------
+rule reformat_counts:
+    input:
+        counts = (config["starAligned"]+"{sample}_STAR.bamReadsPerGene.out.tab")
+    output:
+    	tmp1 = temporary(config["starAligned"]+"{sample}_tmp1.txt"),
+    	tmp2 = temporary(config["starAligned"]+"{sample}_tmp2.txt"),
+    	tmp3 = temporary(config["starAligned"]+"{sample}_tmp3.txt"),
+     	tmp4 = temporary(config["starAligned"]+"{sample}_tmp4.txt"),
+        counts_only = (config["starAligned"]+"{sample}_gene_id_counts.txt")
+    shell:
+        """
+        cut -f1,4 {input.counts} > {output.tmp1};
+        sed -e '1,4d' {output.tmp1} > {output.tmp2};
+        sed -e "1igene_id\t{input.counts}" {output.tmp2} > {output.tmp3};
+        sed 's/_STAR.bamReadsPerGene.out.tab//g' {output.tmp3} > {output.tmp4}; 
+        sed 's,../../starAligned/,,g' {output.tmp4} > {output.counts_only}
+        """
 

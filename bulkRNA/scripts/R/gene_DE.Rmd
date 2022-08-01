@@ -125,7 +125,21 @@ names(genes)[names(genes) == "lenght"] <- "width"
 # keep gene_id to merge with counts data
 genes$GENEID <- genes$gene_id
 genes <- subset(genes, type == "gene")
-
+protein_coding_genes <- subset(genes, genes$gene_biotype == "protein_coding")
+  path <-
+    paste(
+      "../../results/",
+      tool,
+      "/v7_ensembl_protein_coding_genes.txt",
+      sep = ""
+    )
+  write.table(
+    protein_coding_genes,
+    path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
 # make tx2gene
 txdb <-
   makeTxDbFromGFF(paste0(pathToRef, "Sus_scrofa.Sscrofa11.1.107.gtf"), format = "gtf")

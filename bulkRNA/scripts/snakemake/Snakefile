@@ -25,14 +25,15 @@ rule all:
         	expand(config["trimmedQC"]+"{sample}_trimmed_fq1_fastqc.html", sample = config["sample_names"]),
         	expand(config["trimmedQC"]+"{sample}_trimmed_fq2_fastqc.html", sample = config["sample_names"]),
         	
-        	
         	expand(config["starAligned"]+"{sample}_STAR.bam", sample = config["sample_names"]),
         	#expand(config["starAligned"]+"{sample}_STAR_sort.bam", sample = config["sample_names"]),    	
         	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup.bam", sample = config["sample_names"]),   	
         	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam", sample = config["sample_names"]),   	
         	#expand(config["starAligned"]+"{sample}_STAR_sort_mkdup_rdgrp.bam.bai", sample = config["sample_names"]),  	
         	#expand(config["bamstats"]+"{sample}_STAR_sort_mkdup_rdgrp_stats.txt", sample = config["sample_names"]),
-        	expand(config["starAligned"]+"{sample}_gene_id_counts.txt", sample = config["sample_names"])
+        	expand(config["starAligned"]+"{sample}_gene_id_counts.txt", sample = config["sample_names"]),
+        	
+        	expand(config["kallisto"]+"{sample}", sample = config["sample_names"])
 
         	
 #---------------------
@@ -295,4 +296,33 @@ rule reformat_counts:
         sed 's/_STAR.bamReadsPerGene.out.tab//g' {output.tmp3} > {output.tmp4}; 
         sed 's,../../starAligned/,,g' {output.tmp4} > {output.counts_only}
         """
+
+#---------------------
+#rule kallisto alignment and quantification: 
+#---------------------
+rule kallisto_quant:
+	input:
+		fq1trim = (config["trimmedReads"]+"{sample}_trimmed_R1.fastq.gz"),
+		fq2trim = (config["trimmedReads"]+"{sample}_trimmed_R2.fastq.gz")
+	output:
+		counts = directory((config["kallisto"]+"{sample}"))
+	params:
+		kallisto = kallisto_path,
+		GTF = (config["Sscrofa.gtf"]+".gtf"),
+		kallisto_index = (config["kallisto_ref_index"]+".fa"),
+	shell:
+		"{params.kallisto} quant --bias -b 25 --rf-stranded -t 8 -i {params.kallisto_index} -g {params.GTF} -o {output.counts} {input.fq1trim} {input.fq2trim}"
+
+# KEY
+# quant function to run the quantification algorithm
+# --bias learns parameters for a model of sequences specific bias and corrects the abundances accordlingly.
+# -b bootstrap 
+# -t (nthreads). Specify the number of threads/CPUs used for mapping. (nthreads) The value should be between 1 and 32. 1 by default.
+# -i specifics the location and name of the reference index to be used for quantification.
+# -g location and name of the reference gene annotation file for transcriptome information. 
+# -o name of the directory to write the output to. Unique for each sample ID. 
+# pair 1 and pair 2 of the fastq files 
+
+#---------------------
+# End of Snakefile. Proceed to R scripts for differential expression. 
 
