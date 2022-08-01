@@ -30,19 +30,19 @@ First move to the scripts snakemake folder
 `cd LPS_pigs/bulkRNA/scripts/snakemake/`\
 Now run the snakefile. 
 `snakemake -s Snakefile`\
-To run multiple samples in parallel use -j and the number of jobs to run.\
+To run multiple samples in parallel use -j and the number of jobs to run.
 
 ### 3. preform differntial expression
 
-move to the results folder. Create sub directories. 
+move to the results folder. Create sub directories.\ 
 `cd star`\
-`mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom`\
+`mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom`
 
-move into the kallisto results folder. 
+move into the kallisto results folder.\ 
 `cd ../kallisto`\
-`mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM`\
+`mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM`
 
-move to the scripts R folder.
+move to the scripts R folder.\
 `cd ../../scripts/R`\
 read over the gene DE.Rmd file to deteremine which tissue analysis you want to perform (Brain, Kidney, or Blood).
 
