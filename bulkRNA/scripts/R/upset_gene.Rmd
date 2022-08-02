@@ -1,0 +1,750 @@
+---
+title: "Upset Plot gene level among tissues"
+author: "Kimberly Olney"
+date: "08/02/2022"
+output: html_document
+---
+
+# Setup
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+# Library packages
+```{r packages}
+library(UpSetR)
+library(ComplexUpset)
+library(ggplot2movies)
+```
+# Save function
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+# Function to createtables
+```{r}
+fromListBinay <- function (input) {
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  row.names(data) <- elements
+  return(data)
+}
+
+makePaddedDataFrame <- function(l, ...) {
+  maxlen <- max(sapply(l, length))
+  data.frame(lapply(l, na.pad, len = maxlen), ...)
+}
+
+```
+# User defined variables
+```{r set_variables}
+control <- "Saline"
+treatment <- "LPS"
+tool <- c("star") 
+```
+# Read in DEGs
+```{r}
+star_brain <-
+  read.delim(
+    paste0(
+      "../../results/",
+      tool,
+      "/DEGs/",
+      treatment,
+      "_Brain_gene_DEGs_FDRq0.05.txt"
+    ),
+    header = TRUE,
+    sep = "\t"
+  )
+star_kidney <-
+  read.delim(
+    paste0(
+      "../../results/",
+      tool,
+      "/DEGs/",
+      treatment,
+      "_Kidney_gene_DEGs_FDRq0.05.txt"
+    ),
+    header = TRUE,
+    sep = "\t"
+  )
+star_blood <-
+  read.delim(
+    paste0(
+      "../../results/",
+      tool,
+      "/DEGs/",
+      treatment,
+      "_Blood_gene_DEGs_FDRq0.05.txt"
+    ),
+    header = TRUE,
+    sep = "\t"
+  )
+```
+# Subset lists
+```{r}
+up_star_brain <- subset(star_brain$gene_name, star_brain$logFC > 0)
+down_star_brain <- subset(star_brain$gene_name, star_brain$logFC < 0)
+
+up_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC > 0)
+down_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC < 0)
+
+up_star_blood <- subset(star_blood$gene_name, star_blood$logFC > 0)
+down_star_blood <- subset(star_blood$gene_name, star_blood$logFC < 0)
+```
+# Output subset lists for downstream use
+```{r}
+# Brain
+write.table(
+  up_star_brain,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Brain_gene_DEGs_FDRq0.05_up_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+write.table(
+  down_star_brain,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Brain_gene_DEGs_FDRq0.05_down_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+# Kidney
+write.table(
+  up_star_kidney,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Kidney_gene_DEGs_FDRq0.05_up_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+write.table(
+  down_star_kidney,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Kidney_gene_DEGs_FDRq0.05_down_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+# Blood
+write.table(
+  up_star_blood,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Blood_gene_DEGs_FDRq0.05_up_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+write.table(
+  down_star_blood,
+    paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_Blood_gene_DEGs_FDRq0.05_down_regulated",
+    sep = ""
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```
+# Upset all tissues and all intersections
+```{r}
+list_input <- list("Brain down-regulated" = down_star_brain,
+                   "Brain up-regulated" = up_star_brain,
+                   "Kidney down-regulated" = down_star_kidney,
+                   "Kidney up-regulated" = up_star_kidney,
+                   "Blood down-regulated" = down_star_blood,
+                   "Blood up-regulated" = up_star_blood)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, set_sizes=FALSE,
+      c('Brain down-regulated','Brain up-regulated','Kidney down-regulated', 'Kidney up-regulated', 'Blood down-regulated', 'Blood up-regulated'),
+  queries=list(
+    upset_query(set='Brain down-regulated', fill='blue'),
+    upset_query(set='Brain up-regulated', fill='red'),
+    upset_query(set='Kidney down-regulated', fill='blue'),
+    upset_query(set='Kidney up-regulated', fill='red'),
+    upset_query(set='Blood down-regulated', fill='blue'),
+    upset_query(set='Blood up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.5)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+)
+upset_gene
+
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/upset/",
+    treatment,
+    "_brain_kidney_blood_star_upset_plot"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 8.5, height = 5)
+```
+
+# Output gene lists of shared and unique
+```{r}
+# shared between the three tissues
+shared_up <-
+  Reduce(intersect, list(up_star_kidney, up_star_brain, up_star_blood))
+write.table(
+  shared_up,
+  paste0("../../results/",
+  tool,
+  "/upset/", 
+  treatment, 
+  "_brain_kidney_blood_star_shared_up.txt"),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+shared_down <-
+  Reduce(intersect,
+         list(down_star_kidney, down_star_brain, down_star_blood))
+write.table(
+  shared_down,
+  paste0("../../results/",
+  tool,
+  "/upset/", 
+  treatment, 
+  "_brain_kidney_blood_star_shared_down.txt"),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+# Binary table with colnames:
+up_gene_list_results <- fromListBinay(list_input)
+write.table(
+  up_gene_list_results,
+  paste0("../../results/",
+  tool,
+  "/upset/", 
+  treatment, 
+  "_upset_gene_list_binary_results.txt"),
+  sep = "\t",
+  quote = FALSE
+)
+```
+# Output gene lists continued
+```{r}
+# shared between brain and blood
+brain_blood_up <-
+  subset(
+    up_gene_list_results,
+    `Blood up-regulated` == 1 & `Brain up-regulated` == 1
+    &
+      `Kidney down-regulated` == 0 & `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(brain_blood_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_blood_star_shared_up.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+brain_blood_down <-
+  subset(
+    up_gene_list_results,
+    `Blood down-regulated` == 1 & `Brain down-regulated` == 1
+    &
+      `Kidney down-regulated` == 0 & `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(brain_blood_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_blood_star_shared_down.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+# shared between brain and kidney
+brain_kidney_up <-
+  subset(
+    up_gene_list_results,
+    `Brain up-regulated` == 1 & `Kidney up-regulated` == 1
+    &
+      `Blood down-regulated` == 0 & `Blood up-regulated` == 0
+  )
+write.table(
+  row.names(brain_kidney_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_kidney_star_shared_up.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+brain_kidney_down <-
+  subset(
+    up_gene_list_results,
+    `Brain down-regulated` == 1 & `Kidney down-regulated` == 1
+    &
+      `Blood down-regulated` == 0 & `Blood up-regulated` == 0
+  )
+write.table(
+  row.names(brain_kidney_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_kidney_star_shared_down.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+# shared between kidney and blood
+blood_kidney_up <-
+  subset(
+    up_gene_list_results,
+    `Kidney up-regulated` == 1 & `Blood up-regulated` == 1
+    &
+      `Brain down-regulated` == 0 & `Brain up-regulated` == 0
+  )
+write.table(
+  row.names(blood_kidney_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_kidney_blood_star_shared_up.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+blood_kidney_down <-
+  subset(
+    up_gene_list_results,
+    `Blood down-regulated` == 1 & `Kidney down-regulated` == 1
+    &
+      `Brain down-regulated` == 0 & `Brain up-regulated` == 0
+  )
+write.table(
+  row.names(blood_kidney_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_kidney_blood_star_shared_down.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+# unique to brain
+brain_up <-
+  subset(
+    up_gene_list_results,
+    `Brain up-regulated` == 1 &
+      `Blood up-regulated` == 0  &
+      `Blood down-regulated` == 0 &
+      `Kidney down-regulated` == 0 &
+      `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(brain_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_up_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+brain_down <-
+  subset(
+    up_gene_list_results,
+    `Brain down-regulated` == 1 &
+      `Blood up-regulated` == 0  &
+      `Blood down-regulated` == 0 &
+      `Kidney down-regulated` == 0 &
+      `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(brain_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_brain_down_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+# unique to kidney
+kidney_up <-
+  subset(
+    up_gene_list_results,
+    `Kidney up-regulated` == 1 &
+      `Blood up-regulated` == 0  &
+      `Blood down-regulated` == 0 &
+      `Brain down-regulated` == 0 &
+      `Brain up-regulated` == 0
+  )
+write.table(
+  row.names(kidney_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_kidney_up_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+kidney_down <-
+  subset(
+    up_gene_list_results,
+    `Kidney down-regulated` == 1 &
+      `Blood up-regulated` == 0  &
+      `Blood down-regulated` == 0 &
+      `Brain down-regulated` == 0 &
+      `Brain up-regulated` == 0
+  )
+write.table(
+  row.names(kidney_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_kidney_down_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+# unique to blood
+blood_up <-
+  subset(
+    up_gene_list_results,
+    `Blood up-regulated` == 1 &
+      `Brain up-regulated` == 0  &
+      `Brain down-regulated` == 0 &
+      `Kidney down-regulated` == 0 &
+      `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(blood_up),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_blood_up_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+blood_down <-
+  subset(
+    up_gene_list_results,
+    `Blood down-regulated` == 1 &
+      `Brain up-regulated` == 0  &
+      `Brain down-regulated` == 0 &
+      `Kidney down-regulated` == 0 &
+      `Kidney up-regulated` == 0
+  )
+write.table(
+  row.names(blood_down),
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_blood_down_unqiue.txt"
+), sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+#--- make dataframe
+na.pad <- function(x, len) {
+  x[1:len]
+}
+
+df <-
+  makePaddedDataFrame(
+    list(
+      shared_down = shared_down,
+      kindey_brain_down = row.names(brain_kidney_down),
+      blood_brain_down = row.names(brain_blood_down),
+      blood_kidney_down = row.names(blood_kidney_down),
+      blood_down = row.names(blood_down),
+      kidney_down = row.names(kidney_down),
+      brain_down = row.names(brain_down),
+      shared_up = shared_up,
+      kindey_brain_up = row.names(brain_kidney_up),
+      blood_brain_up = row.names(brain_blood_up),
+      blood_kidney_up = row.names(blood_kidney_up),
+      blood_up = row.names(blood_up),
+      kidney_up = row.names(kidney_up),
+      brain_up = row.names(brain_up)
+    )
+  )
+df[is.na(df)] <- ""
+write.table(
+  df,
+  paste0("../../results/",
+  tool,
+  "/upset/",
+  treatment,
+  "_shared_and_unique_DEGs_among_tissues_star.txt"
+), row.names = FALSE, quote = FALSE, sep = "\t")
+```
+# Plot pretty
+```{r}
+list_input <- list( "Blood down" = down_star_blood,
+                    "Brain down" = down_star_brain,
+                   "Kidney down" = down_star_kidney,
+                   "Blood up" = up_star_blood, 
+                   "Kidney up" = up_star_kidney,
+                  "Brain up" = up_star_brain)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, 
+      c('Brain down','Kidney down', 'Blood down', 
+        'Brain up', 'Kidney up', 'Blood up'),
+  queries=list(
+    upset_query(set='Brain down', fill='blue', color='blue'),
+    upset_query(set='Kidney down', fill='blue', color='blue'),
+    upset_query(set='Blood down', fill='blue', color='blue'),
+    upset_query(set='Brain up', fill='red', color='red'),
+    upset_query(set='Kidney up', fill='red', color='red'),
+    upset_query(set='Blood up', fill='red', color='red'), 
+    upset_query(intersect = c('Blood down','Kidney down','Brain down'), color='blue',fill='blue', only_components=c('intersections_matrix', 'Intersection size')),
+    upset_query(intersect = c('Blood up', 'Kidney up','Brain up'), color='red',fill='red', only_components=c('intersections_matrix', 'Intersection size'))
+  ),
+  intersections =list(c('Blood down','Kidney down','Brain down'),
+                      c('Brain down', 'Kidney down'), 
+                      c('Brain down', 'Blood down'), 
+                      c('Kidney down', 'Blood down'), 
+                      'Blood down', 'Kidney down', 'Brain down', 
+                      c('Blood up', 'Kidney up','Brain up'), 
+                      c('Brain up', 'Kidney up'), 
+                      c('Brain up', 'Blood up'), 
+                      c('Kidney up', 'Blood up'), 
+                      'Blood up', 'Kidney up', 'Brain up'
+                      ),
+  
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+        mapping=aes(fill='bars_color')
+      )
+      + scale_fill_manual(values=c('grey'), guide='none')
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          axis.line=element_line(colour='black')))),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45)),
+  set_sizes=(
+    upset_set_size(geom=geom_bar(width=0.4), position="right")
+    + theme(axis.line.x=element_line(colour='black'), axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.ticks.x=element_line())),
+  sort_sets=FALSE,
+  sort_intersections=FALSE)
+upset_gene
+
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/upset/",
+    treatment,
+    "_brain_kidney_blood_star_upset_plot_cleaned"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 8.5, height = 5)
+```
+# brain and kidney only 
+```{r}
+list_input <- list("Brain down" = down_star_brain,
+                   "Kidney down" = down_star_kidney,
+                   "Kidney up" = up_star_kidney,
+                  "Brain up" = up_star_brain)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, 
+      c('Brain down','Kidney down',  
+        'Brain up', 'Kidney up'),
+  queries=list(
+    upset_query(set='Brain down', fill='blue'),
+    upset_query(set='Kidney down', fill='blue'),
+    upset_query(set='Brain up', fill='red'),
+    upset_query(set='Kidney up', fill='red'),
+    upset_query(intersect = c('Kidney down','Brain down'), color='blue',fill='blue', only_components=c('intersections_matrix', 'Intersection size')),
+    upset_query(intersect = c('Kidney up','Brain up'), color='red',fill='red', only_components=c('intersections_matrix', 'Intersection size'))
+  ),
+  intersections =list( c('Brain down', 'Kidney down'), 
+                        'Kidney down', 'Brain down', 
+                      c('Brain up', 'Kidney up'), 
+                        'Kidney up', 'Brain up', 
+                      c('Brain up', 'Kidney down'),
+                      c('Brain down', 'Kidney up')
+                      ),
+  
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+        mapping=aes(fill='bars_color')
+      )
+      + scale_fill_manual(values=c('grey'), guide='none')
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          axis.line=element_line(colour='black')))),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45)),
+  set_sizes=(
+    upset_set_size(geom=geom_bar(width=0.4), position="right")
+    + theme(axis.line.x=element_line(colour='black'), 
+            axis.text.x = element_text(angle = 45, hjust = 1),
+            axis.ticks.x=element_line())),
+  sort_sets=FALSE,
+  sort_intersections=FALSE)
+upset_gene
+
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/upset/",
+    treatment,
+    "_brain_kidney_star_upset_plot_cleaned"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 8.5, height = 5)
+```
+```{r}
+upset_gene <- upset(data, 
+      c('Brain down','Kidney down',  
+        'Brain up', 'Kidney up'),
+          themes=upset_modify_themes(
+        list('intersections_matrix'=theme(text=element_text(size=6)),
+          'overall_sizes' = theme(#axis.text.y = element_text(size =6), 
+                                     axis.text.x = element_text(size =6)))),
+  queries=list(
+    upset_query(set='Brain down', fill='blue'),
+    upset_query(set='Kidney down', fill='blue'),
+    upset_query(set='Brain up', fill='red'),
+    upset_query(set='Kidney up', fill='red'),
+    upset_query(intersect = c('Kidney down','Brain down'), color='blue',fill='blue', only_components=c('intersections_matrix', 'Intersection size')),
+    upset_query(intersect = c('Kidney up','Brain up'), color='red',fill='red', only_components=c('intersections_matrix', 'Intersection size'))
+  ),
+  intersections =list( c('Brain down', 'Kidney down'), 
+                        'Kidney down', 'Brain down', 
+                      c('Brain up', 'Kidney up'), 
+                        'Kidney up', 'Brain up', 
+                      c('Brain up', 'Kidney down'),
+                      c('Brain down', 'Kidney up')
+                      ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        size=1,
+        text = list(size = 2),
+        text_mapping = aes(),
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.3,   # reduce width of the bars
+        mapping=aes(fill='bars_color')
+      )
+      + scale_fill_manual(values=c('grey'), guide='none')
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          axis.line=element_line(colour='black')))),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=2,
+        stroke=0.45)) +
+        theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6)),
+  set_sizes=(
+    upset_set_size(geom=geom_bar(width=0.4), position="right")
+    + theme(axis.line.x=element_line(colour='black'), 
+            axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+            axis.title.x = element_text(size = 6),
+            axis.ticks.x=element_line())),
+  sort_sets=FALSE,
+  sort_intersections=FALSE)
+upset_gene
+
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/upset/",
+    treatment,
+    "_brain_kidney_star_upset_plot_cleaned"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 4.5, height = 5)
+```

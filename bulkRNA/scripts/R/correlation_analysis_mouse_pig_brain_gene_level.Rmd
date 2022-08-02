@@ -1,0 +1,434 @@
+---
+title: "LPS mouse and pig DEG comparison and correlation"
+author: "Kimberly Olney"
+date: "7/26/2022"
+output:
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+library(geneName)
+library(plotly)
+library(tidyverse)
+library(htmlwidgets)
+library(ggvenn)
+library(dplyr)
+library(gprofiler2)
+library(stats)
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+saveToPDF <- function(...) {
+  d = dev.copy(pdf, ...)
+  dev.off(d)
+}
+```
+
+# Read in DEG tables
+```{r}
+Kang <-
+  read.delim("../../mouse_comparison/mouse_WT-LPS_over_WT.txt")
+# fdrq 0.05
+mouse_limma_FDRq0.05 <-
+  read.delim("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq0.05.txt")
+pig_brain_FDRq0.05 <-
+  read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt")
+# fdrq 1.0
+mouse_limma_FDRq1.00 <-
+  read.delim("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq1.00.txt")
+pig_brain_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt")
+```
+
+# Orthologs
+Convert mouse and pig gene_ids to human gene symbols 
+https://cran.r-project.org/web/packages/gprofiler2/vignettes/gprofiler2.html
+```{r}
+human_mouse_orth <-
+  gorth(
+    query = mouse_limma_FDRq1.00$GeneID,
+    source_organism = "mmusculus",
+    target_organism = "hsapiens",
+    mthreshold = Inf,
+    filter_na = TRUE,
+    numeric_ns = "ENTREZGENE_ACC"
+  )
+
+human_pig_orth <-
+  gorth(
+    query = pig_brain_FDRq1.00$gene_id,
+    source_organism = "sscrofa",
+    target_organism = "hsapiens",
+    mthreshold = Inf,
+    filter_na = TRUE,
+    numeric_ns = "ENTREZGENE_ACC"
+  )
+```
+# Merge ortholog name with the species gene id
+```{r}
+# add column for downstream merging
+human_pig_orth$gene_id <- human_pig_orth$input
+pig_brain_FDRq1.00_orth <-
+  merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id")
+pig_brain_FDRq0.05_orth <-
+  merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id")
+
+human_mouse_orth$GeneID <- human_mouse_orth$input
+mouse_limma_FDRq1.00_orth <-
+  merge(mouse_limma_FDRq1.00, human_mouse_orth, by = "GeneID")
+mouse_limma_FDRq0.05_orth <-
+  merge(mouse_limma_FDRq0.05, human_mouse_orth, by = "GeneID")
+```
+
+# Find shared and unique DEGs between mouse and pig
+```{r}
+# rename GeneName to gene_name to merge data sets and find intersections
+mouse_and_pg_df <-
+  merge(mouse_limma_FDRq1.00_orth, pig_brain_FDRq1.00_orth, by = "ortholog_name")
+
+shared_gene_name <-
+  intersect(mouse_limma_FDRq0.05_orth$ortholog_name,
+            pig_brain_FDRq0.05_orth$ortholog_name)
+uniqueToMouse_gene_name <-
+  setdiff(mouse_limma_FDRq0.05_orth$ortholog_name,
+          pig_brain_FDRq0.05_orth$ortholog_name)
+uniqueToPig_gene_name <-
+  setdiff(pig_brain_FDRq0.05_orth$ortholog_name,
+          mouse_limma_FDRq0.05_orth$ortholog_name)
+
+shared <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% shared_gene_name,]
+uniqueToMouse <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToMouse_gene_name,]
+uniqueToPig <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToPig_gene_name,]
+
+# Venn diagram to see total DEGs between mouse and pig
+x = list(mouse = mouse_limma_FDRq0.05_orth$ortholog_name,
+         pig = pig_brain_FDRq0.05_orth$ortholog_name)
+
+mouse_pig_venn <- ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "purple"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+mouse_pig_venn
+```
+
+```{r,  message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+mouse_pig_venn
+path <-
+  paste0("../../mouse_comparison/results/Venn_mouse_and_pig_brain")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+```
+# Output shared and unique DEGs as tables
+```{r}
+#output table
+write.table(
+  shared_gene_name,
+  "../../mouse_comparison/results/mouse_pig_shared_gene_name.txt",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  uniqueToMouse_gene_name,
+  "../../mouse_comparison/results/uniqueToMouse_gene_name.txt",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  uniqueToPig_gene_name,
+  "../../mouse_comparison/results/uniqueToPig_gene_name.txt",
+  quote = F,
+  row.names = F
+)
+```
+
+# Correlation of the log2FC between species 
+### Shared DEGs
+```{r}
+# Shapiro-Wilk normality test
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test
+res <- cor.test(shared$logFC.x, shared$logFC.y,
+                method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3)
+
+# shared between mouse and pig
+p <-
+  ggplot(data = shared, aes(
+    x = logFC.x,
+    y = logFC.y,
+    text = paste(ortholog_name)
+  )) +
+  annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(shared$logFC.x),
+    ymin = max(shared$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(shared$logFC.x),
+    ymin = 0,
+    ymax = min(shared$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+  annotate(
+    "text",
+    x = -2,
+    y = 5,
+    label = paste0("rho = ", rho_value, "\n",
+                   "p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(title = "Shared DEGs between mouse and pig",
+           x = "mouse",
+           y = "pig")
+
+ggplotly(p)
+```
+write table
+```{r}
+# difference between the mouse and pig fold change
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+# add direction information. 
+# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+# now reformat the whole dataframe to be pretty and legible
+df_shared <-
+  df_shared[, c(1, 9, 13, 34, 38, 46, 48)]
+# rename columns
+data.table::setnames(
+  df_shared,
+  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'mouse_logFC',
+    'mouse_adj.P.Val',
+    'pig_logFC',
+    'pig_adj.P.Val'
+  )
+)
+
+#output table
+write.table(
+  df_shared,
+  "../../mouse_comparison/results/df_shared_mouse_pig.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+### Unique to mouse DEGs
+```{r}
+shapiro.test(uniqueToMouse$logFC.x)
+shapiro.test(uniqueToMouse$logFC.y)
+
+res <- cor.test(uniqueToMouse$logFC.x, uniqueToMouse$logFC.y,
+                method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3)
+
+p <-
+  ggplot(data = uniqueToMouse, aes(
+    x = logFC.x,
+    y = logFC.y,
+    text = paste(gene_name)
+  )) +
+  annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToMouse$logFC.x),
+    ymin = max(uniqueToMouse$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToMouse$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToMouse$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+  annotate(
+    "text",
+    x = -2,
+    y = 1.25,
+    label = paste0("rho = ", rho_value, "\n",
+                   "p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(title = "DEGs unique to mouse",
+           x = "mouse",
+           y = "pig")
+
+ggplotly(p)
+```
+write table
+```{r}
+uniqueToMouse$logFC_difference <-
+  (uniqueToMouse$logFC.x - uniqueToMouse$logFC.y)
+uniqueToMouse$direction_value <-
+  uniqueToMouse$logFC.x * uniqueToMouse$logFC.y
+
+df_uniqueToMouse <- uniqueToMouse %>%
+  mutate(direction_status = if_else(uniqueToMouse$direction_value < 0, "opposite", "same"))
+
+df_uniqueToMouse <-
+  df_uniqueToMouse[, c(1, 9, 13, 34, 38, 46, 48)]  # returns a data.frame
+data.table::setnames(
+  df_uniqueToMouse,
+  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'mouse_logFC',
+    'mouse_adj.P.Val',
+    'pig_logFC',
+    'pig_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToMouse,
+  "../../mouse_comparison/results/df_uniqueToMouse.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+### Unique to pig DEGs
+```{r}
+shapiro.test(uniqueToPig$logFC.x)
+shapiro.test(uniqueToPig$logFC.y)
+
+res <- cor.test(uniqueToPig$logFC.x, uniqueToPig$logFC.y,
+                method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3)
+
+p <-
+  ggplot(data = uniqueToPig, aes(
+    x = logFC.x,
+    y = logFC.y,
+    text = paste(gene_name)
+  )) +
+  annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToPig$logFC.x),
+    ymin = max(uniqueToPig$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToPig$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToPig$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+  annotate(
+    "text",
+    x = -.17,
+    y = 1.5,
+    label = paste0("rho = ", rho_value, "\n",
+                   "p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) +
+  labs(title = "DEGs unique to pig",
+       x = "mouse",
+       y = "pig")
+ggplotly(p)
+```
+
+```{r}
+uniqueToPig$logFC_difference <-
+  (uniqueToPig$logFC.x - uniqueToPig$logFC.y)
+uniqueToPig$direction_value <-
+  uniqueToPig$logFC.x * uniqueToPig$logFC.y
+
+df_uniqueToPig <- uniqueToPig %>%
+  mutate(direction_status = if_else(uniqueToPig$direction_value < 0, "opposite", "same"))
+
+df_uniqueToPig <-
+  df_uniqueToPig[, c(1, 9, 13, 34, 38, 46, 48)]  # returns a data.frame
+data.table::setnames(
+  df_uniqueToPig,
+  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'mouse_logFC',
+    'mouse_adj.P.Val',
+    'pig_logFC',
+    'pig_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToPig,
+  "../../mouse_comparison/results/df_uniqueToPig.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+# Save rObjects
+```{r}
+```

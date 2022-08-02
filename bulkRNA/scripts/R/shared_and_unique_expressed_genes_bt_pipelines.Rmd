@@ -1,0 +1,452 @@
+---
+title: "Genes shared and unique betwen Kallisto and Star"
+author: "Kimberly Olney"
+date: "05/31/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r packages}
+library(UpSetR)
+library(ComplexUpset)
+library(ggplot2movies)
+library(ggplot2)
+library(ggpubr)
+```
+
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+# Binary list shared gene function
+```{r}
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+}
+
+#--- make dataframe
+na.pad <- function(x,len){
+    x[1:len]
+}
+
+makePaddedDataFrame <- function(l,...){
+    maxlen <- max(sapply(l,length))
+    data.frame(lapply(l,na.pad,len=maxlen),...)
+}
+```
+# Read in DEGs
+```{r}
+star_brain <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+star_kidney <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq1.00.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+star_blood <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq1.00.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+
+kallisto_brain <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Brain_isoform_DEGs_FDRq1.0.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+kallisto_kidney <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Kidney_isoform_DEGs_FDRq1.0.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+kallisto_blood <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Blood_isoform_DEGs_FDRq1.0.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+
+# FDRq < 0.05
+star_brain_sig <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+star_kidney_sig <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+star_blood_sig <-
+  read.delim(
+    "../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+
+kallisto_brain_sig <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Brain_isoform_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+kallisto_kidney_sig <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Kidney_isoform_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+kallisto_blood_sig <-
+  read.delim(
+    "../../results/kallisto/DEGs/LPS_Blood_isoform_DEGs_FDRq0.05.txt",
+    header = TRUE,
+    sep = "\t"
+  )
+```
+# Subset lists
+```{r}
+star_brain <- c(star_brain$gene_name)
+star_kidney <- c(star_kidney$gene_name)
+star_blood <- c(star_blood$gene_name)
+
+kallisto_brain <- c(kallisto_brain$gene_name)
+kallisto_kidney <- c(kallisto_kidney$gene_name)
+kallisto_blood <- c(kallisto_blood$gene_name)
+```
+# Upset all tissues 
+```{r}
+list_input <- list("Brain gene" = star_brain,
+                   "Kidney gene" = star_kidney,
+                   "Blood gene" = star_blood,
+                   "Brain isoform" = kallisto_brain,
+                   "Kidney isoform" = kallisto_kidney,
+                   "Blood isoform" = kallisto_blood)
+data <- fromList(list_input)
+
+upset_plot <- upset(data, set_sizes=FALSE,
+      c('Brain gene','Kidney gene', 'Blood gene', 'Brain isoform','Kidney isoform', 'Blood isoform'),
+  queries=list(
+    upset_query(set='Brain gene', fill='orange'),
+    upset_query(set='Kidney gene', fill='orange'),
+    upset_query(set='Blood gene', fill='orange'),
+    upset_query(set='Brain isoform', fill='green'),
+    upset_query(set='Kidney isoform', fill='green'),
+    upset_query(set='Blood isoform', fill='green')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.05)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+)
+upset_plot
+```
+
+# Upset each tissue seperately 
+### Brain
+```{r}
+brain_sig <- merge(star_brain_sig, kallisto_brain_sig, by = "gene_name", all = TRUE)
+brain_list_input <- list("Brain gene" = star_brain,
+                         "Brain isoform" = kallisto_brain,
+                         "DE" = brain_sig$gene_name
+                         )
+brain_data <- fromList(brain_list_input)
+brain_data$DE <- factor(brain_data$DE, levels = c("1","0"))
+brain_upset_plot <- upset(brain_data, set_sizes = FALSE, 
+      c('Brain gene','Brain isoform'),
+      queries=list(
+        upset_query(set='Brain gene', fill='orange'),
+        upset_query(set='Brain isoform', fill='green')
+      ),
+  base_annotations=list(
+    'Intersection size'=intersection_size(
+      bar_number_threshold=1,  # show all numbers on top of bars
+      width=0.5,   # reduce width of the bars
+      mapping=aes(fill=`DE`)) + 
+   #   guides(fill=guide_legend(title="FDRq <= 0.05")) +
+      scale_y_continuous(limits =c(0, 15100), breaks = seq(0, 15100, by = 1000)) +
+      scale_fill_manual(values=c('1'='purple', '0'='gray'), labels = c("TRUE", "FALSE"), guide = "none")), width_ratio=0.1, 
+      matrix=intersection_matrix(
+      geom=geom_point(shape='circle filled', size=3, stroke=0.45)),
+      sort_sets='descending',
+      sort_intersections='descending')
+brain_upset_plot
+```
+### Kidney
+```{r}
+# kidney only 
+kidney_sig <- merge(star_kidney_sig, kallisto_kidney_sig, by = "gene_name", all = TRUE)
+kidney_list_input <- list("Kidney gene" = star_kidney,
+                         "Kidney isoform" = kallisto_kidney,
+                         "DE" = kidney_sig$gene_name
+                         )
+kidney_data <- fromList(kidney_list_input)
+kidney_data$DE <- factor(kidney_data$DE, levels = c("1","0"))
+kidney_upset_plot <- upset(kidney_data, set_sizes = FALSE, 
+      c('Kidney gene','Kidney isoform'),
+      queries=list(
+        upset_query(set='Kidney gene', fill='orange'),
+        upset_query(set='Kidney isoform', fill='green')
+      ),
+  base_annotations=list(
+    'Intersection size'=intersection_size(
+      bar_number_threshold=1,  # show all numbers on top of bars
+      width=0.5,   # reduce width of the bars
+      mapping=aes(fill=`DE`)) + 
+   #   guides(fill=guide_legend(title="FDRq <= 0.05")) +
+      scale_y_continuous(limits =c(0, 15100), breaks = seq(0, 15100, by = 1000)) +
+      scale_fill_manual(values=c('1'='purple', '0'='gray'), labels = c("TRUE", "FALSE"), guide = "none")), width_ratio=0.1, 
+      matrix=intersection_matrix(
+      geom=geom_point(shape='circle filled', size=3, stroke=0.45)),
+      sort_sets='descending',
+      sort_intersections='descending')
+kidney_upset_plot
+```
+### Blood
+```{r}
+# blood only 
+blood_sig <- merge(star_blood_sig, kallisto_blood_sig, by = "gene_name", all = TRUE)
+blood_list_input <- list("Blood gene" = star_blood,
+                         "Blood isoform" = kallisto_blood,
+                         "DE" = blood_sig$gene_name
+                         )
+blood_data <- fromList(blood_list_input)
+blood_data$DE <- factor(blood_data$DE, levels = c("1","0"))
+blood_upset_plot <- upset(blood_data, set_sizes = FALSE, 
+      c('Blood gene','Blood isoform'),
+      queries=list(
+        upset_query(set='Blood gene', fill='orange'),
+        upset_query(set='Blood isoform', fill='green')
+      ),
+  base_annotations=list(
+    'Intersection size'=intersection_size(
+      bar_number_threshold=1,  # show all numbers on top of bars
+      width=0.5,   # reduce width of the bars
+      mapping=aes(fill=`DE`)) + 
+     # guides(fill=guide_legend(title="FDRq <= 0.05")) +
+      scale_y_continuous(limits =c(0, 15100), breaks = seq(0, 15100, by = 1000)) +
+      scale_fill_manual(values=c('1'='purple', '0'='gray'), labels = c("TRUE", "FALSE"), guide = "none")), width_ratio=0.1, 
+      matrix=intersection_matrix(
+      geom=geom_point(shape='circle filled', size=3, stroke=0.45)),
+      sort_sets='descending',
+      sort_intersections='descending')
+blood_upset_plot
+```
+### Legend
+```{r}
+legend_only <- upset(blood_data, set_sizes = FALSE, 
+      c('Blood gene','Blood isoform'),
+      queries=list(
+        upset_query(set='Blood gene', fill='orange'),
+        upset_query(set='Blood isoform', fill='green')
+      ),
+  base_annotations=list(
+    'Intersection size'=intersection_size(
+      bar_number_threshold=1,  # show all numbers on top of bars
+      width=0.5,   # reduce width of the bars
+      mapping=aes(fill=`DE`)) + 
+      guides(fill=guide_legend(title="FDRq <= 0.05")) +
+      scale_y_continuous(limits =c(0, 15100), breaks = seq(0, 15100, by = 1000)) +
+      scale_fill_manual(values=c('1'='purple', '0'='gray'), labels = c("TRUE", "FALSE"))), width_ratio=0.1, 
+      matrix=intersection_matrix(
+      geom=geom_point(shape='circle filled', size=3, stroke=0.45)),
+      sort_sets='descending',
+      sort_intersections='descending')
+legend_only
+
+# Extract the legend. Returns a gtable
+leg <- get_legend(legend_only)
+# Convert to a ggplot and print
+legend_tpm_bar <- as_ggplot(leg)
+```
+# Combine figures
+```{r}
+ggarrange(brain_upset_plot, kidney_upset_plot, blood_upset_plot, legend_tpm_bar, nrow = 1, labels = c("a)","b)", "c)"), widths = c(2.5, 2.5, 2.5, 1))
+path <- paste0("../../results/comparion_correlation/bt_pipelines/Figure_expressed_genes_upset")
+saveToPDF(paste0(path, ".pdf"), width = 8.4, height = 5)
+```
+
+# How many are DE FDRq < 0.05
+first find the genes that are uniquely expressed at either the isoform or gene level 
+then determine if any of those genes are DE
+```{r}
+# brain
+#shared
+shared_brain <- intersect(kallisto_brain, star_brain)
+shared_brain_sig <- intersect(kallisto_brain_sig$gene_name, star_brain_sig$gene_name)
+shared_brain_nonsig <- setdiff(shared_brain, shared_brain_sig)
+
+#isoform_unique
+unique_iso_brain <- setdiff(kallisto_brain, star_brain)
+unique_iso_brain_sig <- intersect(unique_iso_brain, kallisto_brain_sig$gene_name)
+unique_iso_brain_nonsig <- setdiff(unique_iso_brain, unique_iso_brain_sig)
+
+
+#gene_unique
+unique_gene_brain <- setdiff(star_brain, kallisto_brain)
+unique_gene_brain_sig <- intersect(unique_gene_brain, star_brain_sig$gene_name)
+unique_gene_brain_nonsig <- setdiff(unique_gene_brain, unique_gene_brain_sig)
+
+shared = shared_brain
+shared_nonsig = shared_brain_nonsig
+shared_sig = shared_brain_sig
+
+unique_iso = unique_iso_brain
+unique_iso_nonsig = unique_iso_brain_nonsig
+unique_iso_sig = unique_iso_brain_sig
+
+#gene_unique
+unique_gene = unique_gene_brain
+unique_gene_nonsig = unique_gene_brain_nonsig
+unique_gene_sig = unique_gene_brain_sig 
+ 
+
+df <- makePaddedDataFrame(list(shared=shared,shared_nonsig = shared_brain_nonsig, shared_sig=shared_sig, 
+    unique_iso = unique_iso_brain, unique_iso_nonsig = unique_iso_brain_nonsig, unique_iso_sig = unique_iso_brain_sig,
+unique_gene = unique_gene_brain, unique_gene_nonsig = unique_gene_brain_nonsig, unique_gene_sig = unique_gene_brain_sig ))
+df[is.na(df)] <- ""
+write.table(df, "../../results/comparion_correlation/bt_pipelines/LPS_brain_shared_and_unique_expressed_genes.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+```
+
+```{r}
+# kidney
+#shared
+shared_kidney <- intersect(kallisto_kidney, star_kidney)
+shared_kidney_sig <- intersect(kallisto_kidney_sig$gene_name, star_kidney_sig$gene_name)
+shared_kidney_nonsig <- setdiff(shared_kidney, shared_kidney_sig)
+
+#isoform_unique
+unique_iso_kidney <- setdiff(kallisto_kidney, star_kidney)
+unique_iso_kidney_sig <- intersect(unique_iso_kidney, kallisto_kidney_sig$gene_name)
+unique_iso_kidney_nonsig <- setdiff(unique_iso_kidney, unique_iso_kidney_sig)
+
+
+#gene_unique
+unique_gene_kidney <- setdiff(star_kidney, kallisto_kidney)
+unique_gene_kidney_sig <- intersect(unique_gene_kidney, star_kidney_sig$gene_name)
+unique_gene_kidney_nonsig <- setdiff(unique_gene_kidney, unique_gene_kidney_sig)
+
+
+shared = shared_kidney
+shared_nonsig = shared_kidney_nonsig
+shared_sig = shared_kidney_sig
+
+unique_iso = unique_iso_kidney
+unique_iso_nonsig = unique_iso_kidney_nonsig
+unique_iso_sig = unique_iso_kidney_sig
+
+#gene_unique
+unique_gene = unique_gene_kidney
+unique_gene_nonsig = unique_gene_kidney_nonsig
+unique_gene_sig = unique_gene_kidney_sig 
+ 
+
+df <- makePaddedDataFrame(list(shared=shared,shared_nonsig = shared_kidney_nonsig, shared_sig=shared_sig, 
+    unique_iso = unique_iso_kidney, unique_iso_nonsig = unique_iso_kidney_nonsig, unique_iso_sig = unique_iso_kidney_sig,
+unique_gene = unique_gene_kidney, unique_gene_nonsig = unique_gene_kidney_nonsig, unique_gene_sig = unique_gene_kidney_sig ))
+df[is.na(df)] <- ""
+write.table(df, "../../results/comparion_correlation/bt_pipelines/LPS_kidney_shared_and_unique_expressed_genes.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+```
+
+```{r}
+# blood
+#shared
+shared_blood <- intersect(kallisto_blood, star_blood)
+shared_blood_sig <- intersect(kallisto_blood_sig$gene_name, star_blood_sig$gene_name)
+shared_blood_nonsig <- setdiff(shared_blood, shared_blood_sig)
+
+#isoform_unique
+unique_iso_blood <- setdiff(kallisto_blood, star_blood)
+unique_iso_blood_sig <- intersect(unique_iso_blood, kallisto_blood_sig$gene_name)
+unique_iso_blood_nonsig <- setdiff(unique_iso_blood, unique_iso_blood_sig)
+
+#gene_unique
+unique_gene_blood <- setdiff(star_blood, kallisto_blood)
+unique_gene_blood_sig <- intersect(unique_gene_blood, star_blood_sig$gene_name)
+unique_gene_blood_nonsig <- setdiff(unique_gene_blood, unique_gene_blood_sig)
+
+shared = shared_blood
+shared_nonsig = shared_blood_nonsig
+shared_sig = shared_blood_sig
+
+unique_iso = unique_iso_blood
+unique_iso_nonsig = unique_iso_blood_nonsig
+unique_iso_sig = unique_iso_blood_sig
+
+#gene_unique
+unique_gene = unique_gene_blood
+unique_gene_nonsig = unique_gene_blood_nonsig
+unique_gene_sig = unique_gene_blood_sig 
+ 
+
+df <- makePaddedDataFrame(list(shared=shared,shared_nonsig = shared_blood_nonsig, shared_sig=shared_sig, 
+    unique_iso = unique_iso_blood, unique_iso_nonsig = unique_iso_blood_nonsig, unique_iso_sig = unique_iso_blood_sig,
+unique_gene = unique_gene_blood, unique_gene_nonsig = unique_gene_blood_nonsig, unique_gene_sig = unique_gene_blood_sig ))
+df[is.na(df)] <- ""
+write.table(df, "../../results/comparion_correlation/bt_pipelines/LPS_blood_shared_and_unique_expressed_genes.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+```
+
+# Correlation
+### Brain
+```{r}
+```
+
+### Kidney
+```{r}
+```
+
+### Blood
+```{r}
+```

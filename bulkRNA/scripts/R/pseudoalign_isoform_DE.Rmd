@@ -44,7 +44,7 @@ library(lattice)
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Brain") # Kidney or Brain
+tissue <- c("Blood") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -380,26 +380,6 @@ so <- sleuth_prep(
     log2(x + 0.5),
   filter_target_id = keep_ids$target_ids
 )
-
-counts_filter <- sleuth_to_matrix(so, "obs_norm", "tpm")
-path <-
-  paste(
-    "../../results/",
-    tool,
-    "/TPM/",
-    treatment,
-    "_",
-    tissue,
-    "_obse_norm_TPM.txt",
-    sep = ""
-  )
-write.table(
-  counts_filter,
-  path,
-  sep = "\t",
-  row.names = FALSE,
-  quote = FALSE
-)
 ```
 
 
@@ -482,6 +462,50 @@ saveRDS(so,
         ))
 # sleuth_live(so)
 # results_table <- sleuth_results(so, 'reduced:full', test_type = 'lrt')
+
+target_mapping <- so$target_mapping
+target_mapping_transcripts <- subset(target_mapping, type == "transcript")
+counts_filter <- sleuth_to_matrix(so, "obs_norm", "tpm")
+counts_filter_df <- as.data.frame(counts_filter)
+counts_filter_df$target_id <- rownames(counts_filter_df)
+counts_filter_df <- counts_filter_df[, c(11, 6, 7, 8, 9, 1, 2, 5, 10, 3, 4)]
+
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/TPM/",
+    treatment,
+    "_",
+    tissue,
+    "_obse_norm_TPM.txt",
+    sep = ""
+  )
+write.table(
+  counts_filter_df,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/TPM/",
+    treatment,
+    "_target_mapping_transcripts.txt",
+    sep = ""
+  )
+write.table(
+  target_mapping_transcripts,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
 ```
 
 # Sleuth output 

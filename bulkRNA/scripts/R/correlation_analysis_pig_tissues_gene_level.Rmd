@@ -1,0 +1,959 @@
+---
+title: "LPS pig among tissue DEG comparison and correlation"
+author: "Kimberly Olney"
+date: "7/8/2022"
+output:
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, include=FALSE}
+library(geneName)
+library(plotly)
+library(tidyverse)
+library(htmlwidgets)
+library(ggvenn)
+library(dplyr)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, include=FALSE}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+
+# read in pig data 
+```{r}
+# brain
+pig_brain_FDRq0.05 <-
+  read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt")
+pig_brain_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt")
+
+# kidney
+pig_kidney_FDRq0.05 <-
+  read.delim("../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt")
+pig_kidney_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq1.00.txt")
+
+# blood
+pig_blood_FDRq0.05 <-
+  read.delim("../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq0.05.txt")
+pig_blood_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq1.00.txt")
+```
+
+# shared and unique between brain and kidney 
+```{r}
+# rename GeneName to gene_name to merge data sets and find intersections
+kidneyBrain <- merge(pig_kidney_FDRq1.00, pig_brain_FDRq1.00, by = "gene_name")
+
+shared_gene_name <- intersect(pig_brain_FDRq0.05$gene_name, pig_kidney_FDRq0.05$gene_name)
+uniqueToKidney_gene_name <- setdiff(pig_kidney_FDRq0.05$gene_name, pig_brain_FDRq0.05$gene_name)
+uniqueToBrain_gene_name <- setdiff(pig_brain_FDRq0.05$gene_name, pig_kidney_FDRq0.05$gene_name)
+
+shared <- kidneyBrain[kidneyBrain$gene_name %in% shared_gene_name, ]
+uniqueToBrain <- kidneyBrain[kidneyBrain$gene_name %in% uniqueToBrain_gene_name, ]
+uniqueToKidney <- kidneyBrain[kidneyBrain$gene_name %in% uniqueToKidney_gene_name, ]
+# Venn diagram to see what is gained and lost between the reanalysis
+x = list(brain = pig_brain_FDRq0.05$gene_name, kidney = pig_kidney_FDRq0.05$gene_name)
+ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "blue"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+```
+
+```{r,  message=FALSE, warning=FALSE, echo=FALSE, include=FALSE}
+#path <- paste0("../../results/comparion_correlation/star_gene/Venn_mouse_and_pig_brain")
+#saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+```
+
+# correlation kidney & brain
+### shared DEGs
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(shared$logFC.x),
+    ymin = max(shared$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(shared$logFC.x),
+    ymin = 0,
+    ymax = min(shared$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "Shared DEGs between brain and kidney",
+  x = "kidney",
+  y = "brain"
+)  
+ggplotly(p)
+```
+
+write table
+```{r}
+# difference between fold change
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+# add direction information. 
+# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+# now reformat the whole dataframe to be pretty and legible
+df_shared <-
+  df_shared[, c(1,4,8,12,20,24,26,28)]
+# rename columns
+data.table::setnames(
+  df_shared,
+  old = c('gene_id.x','logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'kidney_logFC',
+    'kidney_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_shared,
+  "../../results/comparion_correlation/star_gene/df_shared_kidney_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+### unique to kidney DEGs
+```{r}
+shapiro.test(uniqueToKidney$logFC.x)
+shapiro.test(uniqueToKidney$logFC.y)
+
+res <- cor.test(uniqueToKidney$logFC.x, uniqueToKidney$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToKidney, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+     annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToKidney$logFC.x),
+    ymin = max(uniqueToKidney$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToKidney$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToKidney$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 1.5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to kidney",
+  x = "kidney",
+  y = "brain"
+) 
+ggplotly(p)
+```
+```{r}
+uniqueToKidney$logFC_difference <- (uniqueToKidney$logFC.x - uniqueToKidney$logFC.y)
+uniqueToKidney$direction_value <- uniqueToKidney$logFC.x * uniqueToKidney$logFC.y
+
+df_uniqueToKidney <- uniqueToKidney %>%
+  mutate(direction_status = if_else(uniqueToKidney$direction_value < 0, "opposite", "same"))
+
+df_uniqueToKidney <-
+  df_uniqueToKidney[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToKidney,
+  old = c('gene_id.x','logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'kidney_logFC',
+    'kidney_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToKidney,
+  "../../results/comparion_correlation/star_gene/df_uniqueToKidney_kidney_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+
+### unique to brain DEGs
+```{r}
+shapiro.test(uniqueToBrain$logFC.x)
+shapiro.test(uniqueToBrain$logFC.y)
+
+res <- cor.test(uniqueToBrain$logFC.x, uniqueToBrain$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToBrain, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+    annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToBrain$logFC.x),
+    ymin = max(uniqueToBrain$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToBrain$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToBrain$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 2,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to brain",
+  x = "kidney",
+  y = "brain"
+) 
+ggplotly(p)
+```
+```{r}
+uniqueToBrain$logFC_difference <- (uniqueToBrain$logFC.x - uniqueToBrain$logFC.y)
+uniqueToBrain$direction_value <- uniqueToBrain$logFC.x * uniqueToBrain$logFC.y
+
+df_uniqueToBrain <- uniqueToBrain %>%
+  mutate(direction_status = if_else(uniqueToBrain$direction_value < 0, "opposite", "same"))
+
+df_uniqueToBrain <-
+  df_uniqueToBrain[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToBrain,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'kidney_logFC',
+    'kidney_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToBrain,
+  "../../results/comparion_correlation/star_gene/df_uniqueToBrain_kidney_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+# shared and unique between brain and blood 
+```{r}
+bloodBrain <- merge(pig_blood_FDRq1.00, pig_brain_FDRq1.00, by = "gene_name")
+
+shared_gene_name <- intersect(pig_brain_FDRq0.05$gene_name, pig_blood_FDRq0.05$gene_name)
+uniqueToBlood_gene_name <- setdiff(pig_blood_FDRq0.05$gene_name, pig_brain_FDRq0.05$gene_name)
+uniqueToBrain_gene_name <- setdiff(pig_brain_FDRq0.05$gene_name, pig_blood_FDRq0.05$gene_name)
+
+shared <- bloodBrain[bloodBrain$gene_name %in% shared_gene_name, ]
+uniqueToBrain <- bloodBrain[bloodBrain$gene_name %in% uniqueToBrain_gene_name, ]
+uniqueToBlood <- bloodBrain[bloodBrain$gene_name %in% uniqueToBlood_gene_name, ]
+
+x = list(brain = pig_brain_FDRq0.05$gene_name, blood = pig_blood_FDRq0.05$gene_name)
+ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "pink"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+```
+
+# correlation
+### shared DEGs
+```{r}
+shared <- shared[!duplicated(shared[,c("gene_name")]),]
+
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(shared$logFC.x),
+    ymin = max(shared$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(shared$logFC.x),
+    ymin = 0,
+    ymax = min(shared$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "Shared DEGs between brain and blood",
+  x = "blood",
+  y = "brain"
+)  
+ggplotly(p)
+```
+```{r}
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+df_shared <-
+  df_shared[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_shared,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_shared,
+  "../../results/comparion_correlation/star_gene/df_shared_blood_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+```{r}
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+df_shared <-
+  df_shared[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_shared,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(    
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'kidney_logFC',
+    'kidney_adj.P.Val'
+  )
+)
+
+write.table(
+  df_shared,
+  "../../results/comparion_correlation/star_gene/df_shared_blood_kidney.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+### unique to blood DEGs
+```{r}
+shapiro.test(uniqueToBlood$logFC.x)
+shapiro.test(uniqueToBlood$logFC.y)
+
+res <- cor.test(uniqueToBlood$logFC.x, uniqueToBlood$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToBlood, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+     annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToBlood$logFC.x),
+    ymin = max(uniqueToBlood$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToBlood$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToBlood$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -5.2,
+    y = 1.5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to blood",
+  x = "blood",
+  y = "brain"
+) 
+ggplotly(p)
+```
+```{r}
+uniqueToBlood$logFC_difference <- (uniqueToBlood$logFC.x - uniqueToBlood$logFC.y)
+uniqueToBlood$direction_value <- uniqueToBlood$logFC.x * uniqueToBlood$logFC.y
+
+df_uniqueToBlood <- uniqueToBlood %>%
+  mutate(direction_status = if_else(uniqueToBlood$direction_value < 0, "opposite", "same"))
+
+df_uniqueToBlood <-
+  df_uniqueToBlood[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToBlood,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToBlood,
+  "../../results/comparion_correlation/star_gene/df_uniqueToBlood_blood_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+### unique to brain DEGs
+```{r}
+shapiro.test(uniqueToBrain$logFC.x)
+shapiro.test(uniqueToBrain$logFC.y)
+
+res <- cor.test(uniqueToBrain$logFC.x, uniqueToBrain$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToBrain, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+    annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToBrain$logFC.x),
+    ymin = max(uniqueToBrain$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToBrain$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToBrain$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -6,
+    y = 2,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to brain",
+  x = "blood",
+  y = "brain"
+) 
+ggplotly(p)
+```
+```{r}
+uniqueToBrain$logFC_difference <- (uniqueToBrain$logFC.x - uniqueToBrain$logFC.y)
+uniqueToBrain$direction_value <- uniqueToBrain$logFC.x * uniqueToBrain$logFC.y
+
+df_uniqueToBrain <- uniqueToBrain %>%
+  mutate(direction_status = if_else(uniqueToBrain$direction_value < 0, "opposite", "same"))
+
+df_uniqueToBrain <-
+  df_uniqueToBrain[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToBrain,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'brain_logFC',
+    'brain_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToBrain,
+  "../../results/comparion_correlation/star_gene/df_uniqueToBrain_blood_brain.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+# shared and unique between kidney and blood 
+```{r}
+bloodKidney <- merge(pig_blood_FDRq1.00, pig_kidney_FDRq1.00, by = "gene_name")
+
+shared_gene_name <- intersect(pig_kidney_FDRq0.05$gene_name, pig_blood_FDRq0.05$gene_name)
+uniqueToBlood_gene_name <- setdiff(pig_blood_FDRq0.05$gene_name, pig_kidney_FDRq0.05$gene_name)
+uniqueToKidney_gene_name <- setdiff(pig_kidney_FDRq0.05$gene_name, pig_blood_FDRq0.05$gene_name)
+
+shared <- bloodKidney[bloodKidney$gene_name %in% shared_gene_name, ]
+uniqueToKidney <- bloodKidney[bloodKidney$gene_name %in% uniqueToKidney_gene_name, ]
+uniqueToBlood <- bloodKidney[bloodKidney$gene_name %in% uniqueToBlood_gene_name, ]
+
+x = list(kidney = pig_kidney_FDRq0.05$gene_name, blood = pig_blood_FDRq0.05$gene_name)
+ggvenn(
+  x,
+  fill_color = c("blue", "pink"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+```
+
+# correlation
+### shared DEGs
+```{r}
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(shared$logFC.x),
+    ymin = max(shared$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(shared$logFC.x),
+    ymin = 0,
+    ymax = min(shared$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "Shared DEGs between kidney and blood",
+  x = "blood",
+  y = "kidney"
+)  
+
+ggplotly(p)
+```
+```{r}
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+df_shared <-
+  df_shared[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_shared,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'kidney_logFC',
+    'kidney_adj.P.Val'
+  )
+)
+
+write.table(
+  df_shared,
+  "../../results/comparion_correlation/star_gene/df_shared_blood_kidney.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+### unique to blood DEGs
+```{r}
+shapiro.test(uniqueToBlood$logFC.x)
+shapiro.test(uniqueToBlood$logFC.y)
+
+res <- cor.test(uniqueToBlood$logFC.x, uniqueToBlood$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToBlood, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+     annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToBlood$logFC.x),
+    ymin = max(uniqueToBlood$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToBlood$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToBlood$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -2,
+    y = 1.5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to blood",
+  x = "blood",
+  y = "kidney"
+) 
+  
+ggplotly(p)
+```
+
+```{r}
+uniqueToBlood$logFC_difference <- (uniqueToBlood$logFC.x - uniqueToBlood$logFC.y)
+uniqueToBlood$direction_value <- uniqueToBlood$logFC.x * uniqueToBlood$logFC.y
+
+df_uniqueToBlood <- uniqueToBlood %>%
+  mutate(direction_status = if_else(uniqueToBlood$direction_value < 0, "opposite", "same"))
+
+df_uniqueToBlood <-
+  df_uniqueToBlood[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToBlood,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'kidney_logFC',
+    'kidney_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToBlood,
+  "../../results/comparion_correlation/star_gene/df_uniqueToBlood_blood_kidney.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+### unique to kidney DEGs
+```{r}
+shapiro.test(uniqueToKidney$logFC.x)
+shapiro.test(uniqueToKidney$logFC.y)
+
+res <- cor.test(uniqueToKidney$logFC.x, uniqueToKidney$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+p <- ggplot(data = uniqueToKidney, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+    annotate(
+    "rect",
+    xmin = 0,
+    xmax = max(uniqueToKidney$logFC.x),
+    ymin = max(uniqueToKidney$logFC.y),
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = min(uniqueToKidney$logFC.x),
+    ymin = 0,
+    ymax = min(uniqueToKidney$logFC.y),
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+  geom_point(size = 2) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+    annotate(
+    "text",
+    x = -5,
+    y = 5,
+    label = paste0("rho = ", rho_value,"\n",
+"p = ", p_value),
+    parse = TRUE,
+    color = "gray29",
+    size = 5
+  ) + labs(
+  title = "DEGs unique to kidney",
+  x = "blood",
+  y = "kidney"
+) 
+ggplotly(p)
+```
+
+```{r}
+uniqueToKidney$logFC_difference <- (uniqueToKidney$logFC.x - uniqueToKidney$logFC.y)
+uniqueToKidney$direction_value <- uniqueToKidney$logFC.x * uniqueToKidney$logFC.y
+
+df_uniqueToKidney <- uniqueToKidney %>%
+  mutate(direction_status = if_else(uniqueToKidney$direction_value < 0, "opposite", "same"))
+
+df_uniqueToKidney <-
+  df_uniqueToKidney[, c(1,4,8,12,20,24,26,28)]
+data.table::setnames(
+  df_uniqueToKidney,
+  old = c('gene_id.x', 'logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'gene_id',
+    'blood_logFC',
+    'blood_adj.P.Val',
+    'kidney_logFC',
+    'kidney_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToKidney,
+  "../../results/comparion_correlation/star_gene/df_uniqueToKidney_blood_kidney.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+# Uniquely expressed and DEGs within a tissue 
+```{r}
+sharedWithBrain <- c(kidneyBrain$gene_name, bloodBrain$gene_name)
+UniqueToBrain_DE_exprssion <-
+  setdiff(pig_brain_FDRq0.05$gene_name, sharedWithBrain)
+df_UniqueToBrain_DE_exprssion <- subset(pig_brain_FDRq0.05, gene_name %in% UniqueToBrain_DE_exprssion)
+write.table(
+  df_UniqueToBrain_DE_exprssion,
+  "../../results/comparion_correlation/star_gene/UniqueToBrain_DE_exprssion.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+sharedWithKidney <- c(kidneyBrain$gene_name, bloodKidney$gene_name)
+UniqueToKidney_DE_exprssion <-
+  setdiff(pig_kidney_FDRq0.05$gene_name, sharedWithKidney)
+df_UniqueToKidney_DE_exprssion <- subset(pig_kidney_FDRq0.05, gene_name %in% UniqueToKidney_DE_exprssion)
+write.table(
+  df_UniqueToKidney_DE_exprssion,
+  "../../results/comparion_correlation/star_gene/UniqueToKidney_DE_exprssion.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+sharedWithBlood <- c(bloodKidney$gene_name, bloodBrain$gene_name)
+UniqueToBlood_DE_exprssion <-
+  setdiff(pig_blood_FDRq0.05$gene_name, sharedWithBlood)
+df_UniqueToBlood_DE_exprssion <- subset(pig_blood_FDRq0.05, gene_name %in% UniqueToBlood_DE_exprssion)
+write.table(
+  df_UniqueToBlood_DE_exprssion,
+  "../../results/comparion_correlation/star_gene/UniqueToBlood_DE_exprssion.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+
+
+
