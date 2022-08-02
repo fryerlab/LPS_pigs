@@ -49,8 +49,7 @@ pathToRef <- c("/research/labs/neurology/fryer/projects/references/pig/ensembl_v
 ```
 
 # Save functions
-These functions with help simultaneously save plots as a png, pdf, and tiff 
-file.
+These functions with help simultaneously save plots as a pdf.
 ```{r warning=FALSE}
 saveToPDF <- function(...) {
     d = dev.copy(pdf,...)

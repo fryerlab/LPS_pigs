@@ -1,0 +1,764 @@
+---
+title: "Isoform differential expression with kallisto/sleuth"
+author: "Kimberly Olney & Kennedi Todd"
+date: "01/19/2022"
+output:
+  pdf_document: default
+---
+
+kallisto is an pseudo-alignment RNA-seq quantification method. 
+See the Snakefile for information about the parameters used for running kallisto. 
+
+More information about using kallisto with sleuth for differential expression may be found here:\
+https://hbctraining.github.io/DGE_workshop_kallisto/lessons/01_DGE_setup_and_overview.html\
+https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html#limma-voom\
+
+# Set up working enivornment
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(BiocParallel) 
+library(edgeR)  
+library(limma)  
+library(ggrepel) 
+library(ggplot2) 
+library(gplots) 
+library(grDevices)  
+library(philentropy) 
+library(stringr) 
+library(variancePartition) 
+library(tximport)
+library(tidyverse)
+library(GenomicFeatures)
+library(tximportData)
+library(wasabi)
+library(sleuth)
+library(dplyr)
+library(plyr)
+library(gridExtra)
+library(grid)
+library(lattice)
+```
+
+# User defined variables
+```{r set_variables}
+tissue <- c("Kidney") # Kidney or Brain
+control <- "Saline"
+treatment <- "LPS"
+control_color <- "gray29"
+treatment_color <- "purple"
+myContrasts <- c("LPS - Saline")
+tool <- c("kallisto") 
+typeOfCount <- c("/abundance.h5") 
+pathToRef <- c("/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/")
+```
+
+# Save functions
+These functions with help simultaneously save plots as pdf
+```{r warning=FALSE}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+# Read data
+```{r read_data}
+# read in metadata
+metadata <-
+  read.delim((
+    "/research/labs/neurology/fryer/projects/sepsis/pig/LPS/metadata.tsv"
+  ),
+  header = TRUE,
+  sep = "\t"
+  )
+# subset for tissue 
+metadata <- metadata[metadata$tissue == tissue, ]
+
+# remove pigs 9 and 13
+metadata <- metadata[metadata$pig_id != "9", ]
+metadata <- metadata[metadata$pig_id != "13", ]
+metadata <- metadata[metadata$blood_group != "BB", ]
+
+# path to counts files
+count_files <-
+  file.path(paste0(
+    "../../", 
+    tool, 
+    "/",
+    metadata$featureCounts_name,
+    typeOfCount
+  ))
+# add sample name to counts files
+names(count_files) <- paste0(metadata$featureCounts_name)
+
+# sleuth and other tools requires path, sample and condition columns.
+# add this information to metadata
+metadata$path <- count_files
+metadata$sample <- metadata$simplified_name
+metadata$condition <- as.factor(metadata$group)
+```
+# Read in annotation file
+```{r}
+gtf.file <- paste0(pathToRef, "Sus_scrofa.Sscrofa11.1.107.gtf")
+gtf.gr <- rtracklayer::import(gtf.file)
+# save gtf as data frame
+gtf.df <- as.data.frame(gtf.gr)
+# get gene id, transcript id, gene name, seqname which is chromosome, and biotype from gtf
+genes <-
+  gtf.df[, c("seqnames",
+             "width",
+             "transcript_id",
+             "gene_id",
+             "gene_name",
+             "gene_biotype",
+             "type")]
+# Up date naming these columns using the correct column information.
+names(genes)[names(genes) == "seqnames"] <- "Chr"
+names(genes)[names(genes) == "lenght"] <- "width"
+# keep gene_id to merge with counts data
+genes$GENEID <- genes$gene_id
+genes$TXNAME <- genes$transcript_id
+# subset to for protein_coding genes
+protein_coding_genes <- subset(genes, genes$gene_biotype == "protein_coding")
+  path <-
+    paste(
+      "../../results/",
+      tool,
+      "/v7_ensembl_protein_coding_genes.txt",
+      sep = ""
+    )
+  write.table(
+    protein_coding_genes,
+    path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+# make tx2gene
+txdb <-
+  makeTxDbFromGFF(paste0(pathToRef, "Sus_scrofa.Sscrofa11.1.107.gtf"), format = "gtf")
+txdb_keys <- keys(txdb, keytype = "TXNAME")
+keytypes(txdb) # list of the different key types
+tx2gene <-
+  AnnotationDbi::select(txdb, txdb_keys, "GENEID", "TXNAME")
+
+# merge genes with tx2gene to have gene_name information with transcript information
+tx2gene_name <- merge(tx2gene, genes, by = c("TXNAME", "GENEID"))
+#tx2gene_name <- tx2gene_name[,c(1,2,3,4,5,6,7)] # reorder so TXNAME is the first column 
+# add target_id, in this case target id is transcript level
+tx2gene_name$target_id <- tx2gene_name$TXNAME 
+```
+# sleuth for differential expression
+Sleuth is a companion package for Kallisto which is used for differential expression analysis of transcript quantification from Kallisto. While you could use other differential expression packages such as limma or DESeq2 to analyze your Kallisto output, Sleuth takes into consideration the inherent variability in transcript quantification. Sleuth also allows the modeling of covariates such as batch, individual, tissue type etc. in the same way as DESeq2/edgeR/limma, which is useful for experimental designs with multiple varying factors.\
+
+Sleuth will do the following:\
+1) The use of boostraps to ascertain and correct for technical variation in experiments.\
+2) Implementation of a flexible response error measurement model for inference that allows for a multitude of experimental designs.\
+3) Interactive plots that enable real-time exploratory data analysis.\
+
+
+Helpful links:\
+https://scilifelab.github.io/courses/rnaseq/labs/kallisto \
+https://rawgit.com/pachterlab/sleuth/master/inst/doc/intro.html \
+https://pachterlab.github.io/sleuth_walkthroughs/trapnell/analysis.html \
+https://shiny.york.ac.uk/bioltf/gene_expression_course/day3/day3.Rmd#section-transcripts-to-genes \
+https://rawgit.com/pachterlab/sleuth/master/inst/doc/intro.html \
+https://informatics.fas.harvard.edu/workshops/HarvardInformatics_DEworkshop_Fall2017.html \
+https://hbctraining.github.io/DGE_workshop_salmon/lessons/09_sleuth.html\
+https://liorpachter.wordpress.com/2015/08/17/a-sleuth-for-rna-seq/\
+
+1) load the kallisto processed data into the object\
+2) estimate parameters for the sleuth response error measurement (full) model\
+3) estimate parameters for the sleuth reduced model\
+4) perform differential analysis (testing).\
+
+# Prepare sleuth object 
+Step 1: Creation of Sleuth object to provide metadata, estimated counts, and design formula for the analysis.\
+Additionally add a annotables database to switch between transcript IDs and associated gene names.\
+First read the Kallisto output files then connect them with metadata, and set up a linear model for expression analysis.
+```{r prepare sleuth, tidy=TRUE}
+# create counts object
+txi.counts.gene <-
+  tximport(
+    count_files,
+    type = tool,
+    tx2gene = tx2gene_name,
+    ignoreAfterBar = TRUE,
+    ignoreTxVersion = TRUE
+  )
+
+dim(tx2gene_name) # inspect
+
+# create dge object. Used later to sum replicates.
+dge <- DGEList(counts = txi.counts.gene$counts,
+                 samples = metadata)
+```
+
+# Save object
+```{r}
+saveRDS(dge, file = paste0("../../rObjects/", treatment, "_", tool, "_",
+                           tolower(tissue),
+                           "_isoform_raw.rds"))
+```
+
+# JSD heatmap
+This portion won't display in the R Markdown pdf; the margins are too large.
+The pdf and png file can only be saved one at a time.
+```{r JSD, warning = FALSE, eval=FALSE}
+# save
+path <- paste0("../../results/", tool, "/JSD/LPS_",tolower(tissue),"_gene_JSD_raw")
+pdf(paste0(path,".pdf"), width = 6, height = 6, pointsize = 8)
+
+# set heatmap colors and names
+colors <- c("blue","skyblue","white") # set heatmap color scale
+colors <- colorRampPalette(colors)(100) # make it a gradient
+sample_group_color <- c(control_color, treatment_color)[dge$samples$group]
+names <- paste(dge$samples$simplified_name,
+               dge$samples$batch,
+               sep = ".")
+
+# find JSD
+data <- JSD(t(edgeR::cpm(dge$counts)), est.prob = "empirical")
+colnames(data) <- names
+rownames(data) <- names
+round.data <- round(data, digits = 3) # round 3 decimal places
+
+# plot heatmap
+heatmap <- heatmap.2(
+  round.data,
+  trace = "none",
+  colCol = sample_group_color,
+  colRow = sample_group_color,
+  symm = TRUE,
+  col = colors,
+  cellnote = round.data,
+  notecex = 1,
+  dendrogram = "none",
+  notecol = "black",
+  key.title = "Color Key",
+  srtCol = 65,
+  margins = c(12,12),
+  keysize = 0.2)
+```
+# Raw MDS with technical replicates
+```{r MDS_techreps, warning=FALSE}
+# set colors and get data
+group_colors <- c(control_color, treatment_color)[dge$samples$group]
+data <- edgeR::cpm(dge$counts, log = TRUE)
+par(bg = 'white')
+
+# plot MDS
+plotMDS(
+  data,
+  top = 100,
+  labels = dge$samples$simplified_name,
+  cex = 0.8,
+  dim.plot = c(1, 2),
+  plot = TRUE,
+  col = group_colors
+)
+title(expression('Top 100 Genes - Raw (Log'[2] ~ 'CPM)'))
+legend(
+  "bottom",
+  legend = c(control, treatment),
+  pch = 16,
+  col = c(control_color, treatment_color),
+  cex = 0.8
+)
+
+# save
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/MDS/",
+    treatment,
+    "_",
+    tolower(tissue),
+    "_gene_MDS_techreps"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 4, height = 4)
+```
+
+
+# Sum technical replicates
+```{r techReps}
+# sum technical replicates
+dim(dge)
+dge.tech <- sumTechReps(dge, dge$samples$simplified_name)
+dim(dge.tech$counts)
+colnames(dge.tech$counts) <- dge.tech$samples$simplified_name
+```
+
+# Raw MDS
+```{r}
+# set colors and get data
+group_colors <-
+  c(control_color, treatment_color)[dge.tech$samples$group]
+data <- edgeR::cpm(dge.tech$counts, log = TRUE)
+
+par(bg = 'white')
+
+# plot MDS
+plotMDS(
+  data,
+  top = 100,
+  labels = dge.tech$samples$simplified_name,
+  cex = 1,
+  dim.plot = c(1, 2),
+  plot = TRUE,
+  col = group_colors
+)
+title(expression('Top 100 Genes - Raw (Log'[2] ~ 'CPM)'))
+
+# save
+path <-
+  paste0("../../results/",
+         tool,
+         "/MDS/",
+         treatment,
+         "_",
+         tolower(tissue),
+         "_gene_MDS_raw")
+saveToPDF(paste0(path, ".pdf"), width = 4, height = 4)
+```
+
+# Create sleuth object 
+```{r create slueth object}
+# read in the raw data. Do not normalize.
+so <- sleuth_prep(dge.tech$samples, normalize = FALSE)
+# this gets a matrix of count for all transcripts, even transcripts that did not pass the filter above.
+# Will add our own filtering in the next step.
+counts <- sleuth_to_matrix(so, "obs_raw", "est_counts")
+# add filter to keep transcripts with min read count of 5 in at least 39% of the samples
+basic_filter_0.39 <- function (row,
+                               min_reads = 5,
+                               min_prop = 0.39)
+{
+  mean(row >= min_reads) >= min_prop
+}
+# this applies the basic filter to the counts
+filter <- apply(counts, 1, basic_filter_0.39)
+filter_df <- as.data.frame(filter) # reformat as df for filtering
+# get target ids that passed the basic filter
+filter_df_true <- subset(filter_df, filter == "TRUE")
+target_ids <- row.names(filter_df_true)
+TXNAME <-
+  gsub("\\..*", "", target_ids) # remove txname version information
+target_filters <- cbind(TXNAME, target_ids)
+# this gives you the filter target ids, needed for merging with biotype filter in the next step
+target_filters <- as.data.frame(target_filters)
+
+# keep only protein coding genes and remove MT genes
+# & tx2gene_name$gene_name != "NA"
+biotypefilter <- subset(tx2gene_name,
+                        gene_biotype == "protein_coding" &
+                        type == "transcript" &  
+                        Chr != "MT")
+# now combine the target_filters and biotypefilter to create the list of keep targets
+# I.e the targets passed basic filtering, are protein_coding, and not on the MT.
+txfilter <-
+  biotypefilter[(biotypefilter$TXNAME %in% target_filters$TXNAME), ]
+# merge to match tx version information which is needed for sleuth
+keep_ids <- merge(txfilter, target_filters, by = "TXNAME")
+#isoform_gene_names <- unique(keep_ids$gene_name)
+# design model for DE
+design <- ~ duration_min + condition
+
+# prepare for slueth object
+so <- sleuth_prep(
+  dge.tech$samples,
+  design,
+  target_mapping = tx2gene_name,
+  extra_bootstrap_summary = TRUE,
+  boostrap_summary = TRUE,
+  read_bootstrap_tpm = TRUE,
+  normalize = TRUE,
+  transformation_function = function(x)
+    log2(x + 0.5),
+  filter_target_id = keep_ids$target_ids
+)
+```
+
+
+dge.tech$samples includes information about the samples with technicial replicates summed together.\
+design is which condition(s) to perform the DE test and any covariates to add to the model.\
+add target_mapping = tx2gene_name to add gene_name information\
+Add 'extra_bootstrap_summary = TRUE' in the above command for transcript variance\
+boostrap_summary = TRUE bootstrap replicates to see how robust our differential expression calls are\
+read_bootstrap_tpm=TRUE to allow for later visualizations in TPM units to be available.\
+normalize the counts. Default is true.\
+By default the transformation of counts is natural log\
+By specifying the transformation_function to be log2(x + 0.5) we are ensuring our output fold changes are log2.This will make plotting and comparig to other tools more intuitive\
+filter_target_id keeps only transcripts that passed basic filtering and are protein coding and not located on MT.\
+
+May also run sleuth at the gene level using gene_mode = TRUE\
+when gene_mode is set to TRUE, this will get the old counts-aggregation method for doing gene-level analysis. This requires aggregation_column to be set. If TRUE, this will override the p-value aggregation mode, but will allow for gene-centric modeling, plotting, and results.\
+
+# Fit sleuth to the model 
+Step 2: Fit the sleuth model\
+Next we fit the linear model and test for one of the model coefficients. 
+In this case we test the treatment versus the control.
+
+The first test we perform is to identify genes that are differently expressed in either the treatment or control conditions. To do this we first specify a “full” model for sleuth. This model contains parameters that are specific to both minutes and condition.
+
+To identify differential genes sleuth will compare expression values estimated according to the full model, with those of a reduced model. In this case, the reduced model estimates parameters only according to condition This has the effect of modeling the data according to the assumption that expression is independent of condition. By comparing expression estimates derived according to the two models, sleuth is able to identify outliers that represent genes who expression can be explained much more accurately when considering condition.
+For more information about including covariates in the model check out this link:\
+https://pachterlab.github.io/sleuth_walkthroughs/bottomly/analysis.html
+Also, Sleuth uses DESeq for how the model should be set up. Refer to DESeq documentation to learn more. 
+```{r fit sleuth}
+# fit the full model
+so <- sleuth_fit(so) 
+# fit the reduced model. 
+# In this case, the reduced model is the intercept-only model.
+so <- sleuth_fit(so, ~1, 'reduced') 
+```
+
+# Test for significant isofrom differential expression 
+Step 3: Test for significant differences between conditions using the lrt and wald test method \
+show_all is TRUE will show all transcripts (not only the ones passing filters). The transcripts that do not pass filters will have NA values in most columns.
+
+Great video explaining the log-likelihood and wald test:\
+https://www.youtube.com/watch?v=yzO80fa0_Y4
+```{r sleuth test}
+# lrt
+so <- sleuth_lrt(so, 'reduced', 'full')
+sleuth_table_lrt <-
+  sleuth_results(so, 'reduced:full', test_type = 'lrt', show_all = FALSE)
+sleuth_table_lrt <- subset(sleuth_table_lrt, type == "transcript")
+sleuth_table_lrt <- sleuth_table_lrt %>% mutate(gene_name = coalesce(gene_name, gene_id))
+sleuth_significant_lrt <-
+  dplyr::filter(sleuth_table_lrt, qval <= 0.05)
+head(sleuth_significant_lrt)
+
+# wald test
+# This function computes the Wald test on one specific 'beta' coefficient on every transcript.
+so <- sleuth_wt(so, which_beta = "conditionLPS")
+sleuth_table_wt <-
+  sleuth_results(so, 'conditionLPS', test_type = "wt", show_all = FALSE)
+sleuth_table_wt <- subset(sleuth_table_wt, type == "transcript")
+sleuth_table_wt <- sleuth_table_wt %>% mutate(gene_name = coalesce(gene_name, gene_id))
+
+sleuth_significant_wt <-
+  dplyr::filter(sleuth_table_wt, qval <= 0.05)
+head(sleuth_significant_wt)
+```
+In general, we can test models that are nested using the likelihood ratio test. Viewing models which have been fit can be done using the models() function.\
+At this point the sleuth object constructed from the kallisto runs has information about the data, the experimental design, the kallisto estimates, the model fit, and the testing. In other words it contains the entire analysis of the data. 
+
+# Sleuth shiny 
+```{r sleuth_shiny, eval = FALSE}
+saveRDS(so,
+        file = paste0(
+          "../../rObjects/",
+          treatment,
+          "_",
+          tool,
+          "_",
+          tolower(tissue),
+          "_sleuth.rds"
+        ))
+# sleuth_live(so)
+# results_table <- sleuth_results(so, 'reduced:full', test_type = 'lrt')
+```
+
+# Sleuth output 
+target_id: the Ensembl transcript ID\
+pval: the Wald test FDR adjusted pvalue using Benjamini-Hochberg\
+qval: the p-value adjusted for multiple test correction\
+b: beta value, which is the log2 fold changes between conditions (These are log2 b/c we specified log2 transformation in the sleuth_prep() step. By default, these would have been natural log fold changes).\
+se_b: standard error of the beta value\
+mean_obs: the mean expression (log2) of the transcript across all samples\
+var_obs: the biological variance of the expression\
+tech_var: the technical variance of expression (derived from the bootstraps)\
+sigma_sq: raw estimator of the variance once the technical variance has been removed\
+smooth_sigma_sq: the smooth regression fit for the shrinkage estimation\
+final_sigma_sq: max(sigma_sq, smooth_sigma_sq). this is the one used for covariance estimation of beta (in addition to tech_var)\
+ens_gene: associated Ensembl gene ID\
+ext_gene: associated gene symbol\
+
+
+### Plot the sleuth results 
+By default, these plots will use the sleuth-normalized est_counts (not the log2 transformed values).
+```{r slueth_plots, warning=FALSE}
+# PCA
+plot_pca(so, color_by = 'condition')
+# plot PCA variance
+plot_pc_variance(so)
+plot_loadings(so)
+```
+
+### Count distributions
+There is a histogram plot to explore count distributions between sample groups. Histogram should be similar to each other when performing DE testing. The count distributions represent the proportion of genes (on the y-axis) associated with the number of counts (designated on the x-axis):
+```{r}
+par(mfrow = c(1, 2))
+plot_group_density(
+  so,
+  use_filtered = FALSE,
+  units = "est_counts",
+  trans = "log",
+  grouping = "condition"
+)
+
+plot_group_density(
+  so,
+  use_filtered = TRUE,
+  units = "est_counts",
+  trans = "log",
+  grouping = "condition"
+)
+# save
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/density/",
+    treatment,
+    "_",
+    tolower(tissue),
+    "_isoform_density"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 6, height = 4)
+
+# heatmap of samples
+plot_sample_heatmap(so)
+path <-
+  paste0("../../results/",
+         tool,
+         "/heatmap/",
+         treatment,
+         "_",
+         tolower(tissue),
+         "_isoform")
+saveToPDF(paste0(path, ".pdf"), width = 6, height = 6)
+```
+
+```{r sleuth_table_wt}
+# output table
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_DEGs_FDRq1.0.txt",
+    sep = ""
+  )
+write.table(
+  sleuth_table_wt,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+# significant DEGs
+sleuth_significant <- dplyr::filter(sleuth_table_wt, qval <= 0.05)
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_DEGs_FDRq0.05.txt",
+    sep = ""
+  )
+write.table(
+  sleuth_significant,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+# view top 10 DEGs
+head(sleuth_significant, 10)
+```
+
+### Assign color values based on cutoff.
+```{r assign_colors}
+# remove enteries with NA
+sleuth_table_wt <- sleuth_table_wt[!is.na(sleuth_table_wt$qval),]
+
+color_values <- vector()
+max <- nrow(sleuth_table_wt)
+
+for(i in 1:max){
+  if (sleuth_table_wt$qval[i] < 0.05){
+    if (sleuth_table_wt$b[i] > 0){
+      color_values <- c(color_values, 1) # 1 when logFC > 0 and FDRq < 0.05
+    }
+    else if (sleuth_table_wt$b[i] < 0){
+      color_values <- c(color_values, 2) # 2 when logFC < 0 and FDRq < 0.05
+    }
+  }
+  else{
+    color_values <- c(color_values, 3) # 3 when FDRq >= 0.05
+  }
+}
+
+# check
+head(cbind(sleuth_table_wt$qval, sleuth_table_wt$b, color_values), 12) # check
+sleuth_table_wt$color_p0.05 <- factor(color_values)
+sleuth_table_wt$gene_name <- as.character(sleuth_table_wt$gene_name )
+```
+# Volcano plot
+```{r volcano}
+up <- sleuth_table_wt[sleuth_table_wt$color_p0.05 == 1, ]
+up10 <- up[1:10, ]
+
+down <- sleuth_table_wt[sleuth_table_wt$color_p0.05 == 2, ]
+down10 <- down[1:10, ]
+
+hadjpval <- (-log10(max(sleuth_table_wt$pval[sleuth_table_wt$qval < 0.05],
+                        na.rm = TRUE)))
+
+p <-
+  ggplot(data = sleuth_table_wt,
+         aes(
+           x = b,
+           y = -log10(pval),
+           color = color_p0.05
+         )) +  
+  geom_point(alpha = 0.8, size = 2) + 
+  theme_bw() +  
+  theme(legend.position = "none") +  
+  scale_color_manual(values = c("red", "blue", "grey")) +  
+  labs(
+    title = "",
+    x = expression(log[2](FC)),
+    y = expression(-log[10] ~ "(" ~ italic("p") ~ "-value)")
+  ) +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+  geom_hline(yintercept = hadjpval,
+             colour = "#000000",
+             linetype = "dashed") +
+  ggtitle(paste0(tissue, " LPS vs Saline\nFDRq < 0.05")) +
+  geom_text_repel(
+    data = up10,
+    aes(
+      x = b,
+      y = -log10(pval),
+      label = gene_name
+    ),
+    color = "maroon",
+    fontface = "italic",
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 30)
+  ) +
+  geom_text_repel(
+    data = down10,
+    aes(
+      x = b,
+      y = -log10(pval),
+      label = gene_name
+    ),
+    color = "navyblue",
+    fontface = "italic",
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 30)
+  )
+p
+
+
+path <-
+  paste0(
+    "../../results/",
+    tool,
+    "/volcano/",
+    treatment,
+    "_",
+    tolower(tissue),
+    "_isoform_volcano_FDRq0.05"
+  )
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
+```
+
+
+# Number of isoforms per gene
+Do all isoforms of a gene show the same bias direction?\
+Do any isoforms of a gene show opposite expression patterns? I.e isoform 1 of geneA is up-regulated but isoform 2 of geneA is down-regulated?
+```{r isoform count}
+# number of isoforms per gene
+# all genes from sleuth table
+numberOfIsoformsPerGene <- table(as.character(sleuth_table_wt$gene_name))
+# all significantly differentially expressed genes
+numberOfIsoformsPerGene <- as.data.frame(numberOfIsoformsPerGene)
+
+numberOfIsoformsPerGene_qval0.05 <-
+  table(as.character(sleuth_significant$gene_name))
+numberOfIsoformsPerGene_qval0.05 <- as.data.frame(numberOfIsoformsPerGene_qval0.05)
+
+# merge the two tables by gene_name, column x so that all transcripts are present
+isoform_count_table <-
+  merge(numberOfIsoformsPerGene,
+        numberOfIsoformsPerGene_qval0.05, by = "Var1", all =TRUE)
+
+
+# rename columns
+names(isoform_count_table)[1] <- "gene_name"
+names(isoform_count_table)[2] <- "isoforms"
+names(isoform_count_table)[3] <- "isoforms_qval0.05"
+# difference between total number of isoforms and isoforms of that gene called as DE, qval < 0.05
+isoform_count_table$diff <-
+  isoform_count_table$isoforms - isoform_count_table$isoforms_qval0.05
+
+# genes that have multiple isoforms but not all isoforms are differential expressed, qval < 0.05
+isoform_bias <- subset(isoform_count_table, diff > 0)
+
+# merge  sleuth table with isoform count table to get all transcripts of the DE genes
+isoform_bias_table <-
+  merge(sleuth_table_wt, isoform_count_table, by = "gene_name")
+# remove columns that are repeated to clean up the table
+isoform_bias_table$TXNAME <- NULL
+isoform_bias_table$GENEID <- NULL
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_bias_FDRq0.05.txt",
+    sep = ""
+  )
+write.table(
+  isoform_bias_table,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```
+# box plot of transcripts 
+Sleuth also has some handy functions to plot expression of transcripts with bootstrap variation to visualize both biological and technical variation for selected transcripts:
+```{r plot_isoform_expression}
+# all isoforms of the genes that are DE
+# this is the same as the isoform_bias_table 
+all_iso_sig_genes <- sleuth_table_wt[sleuth_table_wt$gene_name %in% sleuth_significant$gene_name, ]
+
+path <- paste0("../../results/", tool, "/boxplot/", treatment, "_",tolower(tissue),"_isoforms")
+pdf(paste0(path, ".pdf"), width = 4, height = 4)
+
+# visualize both biological and technical variation for selected transcripts:
+# may use tpm or est_counts 
+violin_Func <- function(a, b){
+  iso <- plot_bootstrap(so, target_id = a, units = "tpm", color_by = "condition") + 
+    theme(legend.position = "none") + 
+    scale_fill_manual(values = c(control_color, treatment_color)) + 
+    labs(title = b, subtitle = a)
+  iso
+}
+# run the violin_Func
+violinPlots <- Map(violin_Func, a = all_iso_sig_genes$target_id, b = all_iso_sig_genes$gene_name)
+violinPlots
+dev.off()
+```
+
