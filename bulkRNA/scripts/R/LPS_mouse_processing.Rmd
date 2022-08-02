@@ -1,0 +1,639 @@
+---
+title: "Differential expression in LPS mice from RPKM data"
+author: "Kimberly Olney"
+date: "07/11/2022"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+params:
+  args: myarg
+---
+
+# Setup
+```{r setup}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r libraries, message=FALSE, warning=FALSE, echo=FALSE}
+library(BiocParallel)  # SnowParam()
+library(dplyr)  # left_join()
+library(edgeR)  # DGEList()
+library(limma)  # plotMDS()
+library(ggrepel) # geom_text_repel()
+library(ggplot2)  # ggplot()
+library(gplots)  # heatmap.2()
+library(grDevices)  # colorRampPalette()
+library(philentropy)  # JSD()
+library(rtracklayer)  # import()
+library(stringr)  # str_match()
+library(variancePartition)  # fitExtractVarPartModel()
+library(reshape)  # melt()
+library(ggvenn)
+library(gtools)
+```
+
+# User defined variables
+```{r set_variables, message=FALSE, warning=FALSE, echo=FALSE}
+tissue <- c("Brain") 
+control <- "Saline"
+treatment <- "LPS"
+control_color <- "gray29"
+treatment_color <- "purple"
+myContrasts <- c("LPS - Saline")
+tool = c("star")
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+# Read data
+```{r read_data}
+# read in metadata
+metadata <-
+  read.delim(
+    paste0("../../mouse_comparison/mouse_metadata.txt"),
+    header = TRUE,
+    sep = "\t"
+  )
+# subset to only look at WT mice
+metadata <- metadata[metadata$genotype == "WT", ]
+
+# read in counts data
+counts <- read.delim(
+  paste0("../../mouse_comparison/mouse_rpkm.txt"),
+  header = TRUE,
+  sep = "\t"
+)
+geneid <- read.delim("../../mouse_comparison/mouse_gene_info.txt",
+                     header = TRUE,
+                     sep = "\t")
+rownames(counts) <- geneid$GeneID
+
+gene_biotype <- read.delim(
+  "../../mouse_comparison/mouse_gene_biotype.txt",
+  header = TRUE,
+  sep = "\t"
+)
+
+# subset to only look at protein coding genes
+genes <-
+  gene_biotype[gene_biotype$Gene_Biotype == "protein_coding", ]
+genes <- gene_biotype
+# remove rows in counts file that are not protein coding
+counts.genes <- subset(counts, row.names(counts) %in% genes$GeneID)
+# remove samples that are not WT
+WT_counts <-
+  subset(
+    counts.genes,
+    select = c(
+      s_SK1_RPKM,
+      s_SK2_RPKM,
+      s_SK3_RPKM,
+      s_SK4_RPKM,
+      s_SK9_RPKM,
+      s_SK10_RPKM,
+      s_SK11_RPKM,
+      s_SK12_RPKM
+    )
+  )
+
+# reorder counts columns to match metadata
+WT_counts <- WT_counts[, (metadata$sampleID)]
+WT_counts_ordered <-
+  WT_counts[match(genes$GeneID, rownames(WT_counts)),]
+
+# check columns and rows match up between files
+all.equal(rownames(WT_counts_ordered), genes$GeneID)
+all.equal(colnames(WT_counts_ordered), (metadata$sampleID))
+```
+
+# Create DGE object
+```{r DGE_object}
+# create object
+dge <- DGEList(counts = WT_counts_ordered,
+               samples = metadata,
+               genes = genes)
+
+# set metadata information as factors for downstream use in labeling plots 
+dge$samples$condition <- as.factor(dge$samples$condition)
+```
+
+```{r}
+saveRDS(dge, file = paste0("../../mouse_comparison/results/LPS_WT_mouse_gene_raw.rds"))
+```
+
+# Remove mitochondrial genes
+```{r MT_genes}
+dim(dge)
+removeMT <- dge$genes$Chr != "chrMT"  # true when NOT MT
+dge <- dge[removeMT,,keep.lib.sizes = FALSE]
+dim(dge)
+```
+# Keep only protein coding genes
+```{r}
+dim(dge)
+keepProtein <- dge$genes$Gene_Biotype == "protein_coding"  # true when NOT MT
+dge <- dge[keepProtein,,keep.lib.sizes = FALSE]
+dim(dge)
+```
+
+# JSD heatmap
+This portion won't display in the R Markdown pdf; the margins are too large.
+The pdf and png file can only be saved one at a time.
+```{r JSD, message=FALSE, warning=FALSE, echo=FALSE, eval=FALSE}
+# save
+path <- paste0("../../mouse_comparison/results/LPS_WT_mouse_gene_JSD_raw")
+pdf(paste0(path,".pdf"), width = 6, height = 6, pointsize = 8)
+
+# set heatmap colors and names
+colors <- c("blue","skyblue","white") # set heatmap color scale
+colors <- colorRampPalette(colors)(100) # make it a gradient
+sample_group_color <- c(control_color, treatment_color)[dge$samples$condition]
+names <- paste(dge$samples$sample)
+
+# find JSD
+data <- JSD(t(edgeR::cpm(dge$counts)), est.prob = "empirical")
+colnames(data) <- names
+rownames(data) <- names
+round.data <- round(data, digits = 3) # round 3 decimal places
+
+# plot heatmap
+heatmap <- heatmap.2(
+  round.data,
+  trace = "none",
+  colCol = sample_group_color,
+  colRow = sample_group_color,
+  symm = TRUE,
+  col = colors,
+  cellnote = round.data,
+  notecex = 1,
+  dendrogram = "none",
+  notecol = "black",
+  key.title = "Color Key",
+  srtCol = 65,
+  margins = c(12,12),
+  keysize = 0.2)
+```
+
+# Raw MDS with technical replicates
+```{r MDS_techreps, warning=FALSE}
+# set colors and get data
+group_colors <- c(treatment_color, control_color)[dge$samples$condition]
+data <- edgeR::cpm(dge$counts, log = TRUE)
+par(bg = 'white')
+
+# plot MDS
+plotMDS(
+  data, 
+  top = 100, 
+  labels = dge$samples$sample,
+  cex = 0.8, 
+  dim.plot = c(1,2), 
+  plot = TRUE, 
+  col = group_colors
+)
+
+title(expression('Top 100 Genes - Raw (Log'[2]~'CPM)'))
+
+legend(
+  "bottom",
+  legend = c(control, treatment),
+  pch = 16,
+  col = c(control_color, treatment_color),
+  cex = 0.8
+)
+
+# save
+path <- paste0("../../mouse_comparison/results/LPS_WT_gene_MDS_raw")
+saveToPDF(paste0(path, ".pdf"), width = 4, height = 4)
+```
+
+
+# Filter lowly expressed genes
+
+The filterByExpr() function in the edgeR package determines which genes have a 
+great enough count value to keep.  We will filter by group.  This means at least 
+4 samples (4 is the smallest group sample size) must express a minimum count of 
+5 (in cpm, this is less than the default value of 10).
+
+```{r filter}
+dim(dge)
+dge$counts <- edgeR::cpm(dge$counts)
+keep.expr <- filterByExpr(dge, group = dge$samples$condition, min.count = 5)
+
+dge.filtered <- dge[keep.expr, , keep.lib.sizes = FALSE]
+dim(dge.filtered)
+```
+
+# TMM normalization
+
+```{r TMM_normalize}
+# Now, normalization by the method of trimmed mean of M-values (TMM)
+dge.filtered.norm <- calcNormFactors(dge.filtered, method = "TMM")
+
+# norm factor summary
+summary(dge.filtered.norm$samples$norm.factors)
+```
+
+
+# Density plot
+
+Density plots of log-intensity distribution of each library can be superposed 
+on a single graph for a better comparison between libraries and for 
+identification of libraries with weird distribution. 
+```{r density_plots}
+# set graphical parameter
+par(mfrow = c(1,3))
+
+# Normalize data for library size and expression intesntiy
+log2cpm.tech <- edgeR::cpm(dge, log = TRUE)
+log2cpm.filtered <- edgeR::cpm(dge.filtered, log = TRUE)
+log2cpm.norm <- edgeR::cpm(dge.filtered.norm, log = TRUE)
+
+# set colors
+colors <- c("red","orange","green","yellow","blue","purple", 
+            "lightgray","brown","pink","cyan")
+nsamples <- ncol(dge)
+
+# First, plot the first column of the log2cpm.tech density
+plot(density(log2cpm.tech[,1]), col = colors[1], lwd = 2, ylim = c(0,0.5), 
+     las = 2, main = "A. Raw", xlab = expression('Log'[2]~CPM))
+
+# For each sample plot the lcpm density
+for (i in 2:nsamples){
+  den <- density(log2cpm.tech[,i]) #subset each column
+  lines(den$x, den$y, col = colors[i], lwd = 2) 
+}
+
+
+# Second, plot log2cpm.filtered
+plot(density(log2cpm.filtered[,1]), col = colors[1], lwd = 2, ylim = c(0,0.5), 
+     las = 2, main = "B. Filtered", xlab = expression('Log'[2]~CPM))
+abline(v = edgeR::cpm(3, log = TRUE), lty = 3)
+for (i in 2:nsamples) {
+  den <- density(log2cpm.filtered[,i])
+  lines(den$x, den$y, col = colors[i], lwd = 2)
+}
+
+# Third, plot log2cpm.norm
+plot(density(log2cpm.norm[,1]), col = colors[1], lwd = 2, ylim = c(0,0.5), 
+     las = 2, main = "C. Normalized", xlab = expression('Log'[2]~CPM))
+abline(v = edgeR::cpm(3, log = TRUE), lty = 3)
+for (i in 2:nsamples) {
+  den <- density(log2cpm.norm[,i])
+  lines(den$x, den$y, col = colors[i], lwd = 2)
+}
+
+# save
+path <- paste0("../../mouse_comparison/results/LPS_WT_gene_density")
+saveToPDF(paste0(path, ".pdf"), width = 6, height = 4)
+```
+
+# Boxplots
+
+```{r boxplots}
+# set parameters
+par(mfrow = c(1,3))
+
+# First look at dge.tech
+boxplot(log2cpm.tech, 
+        main="A. Raw", 
+        xlab="", 
+        ylab=expression('Counts per gene (Log'[2]~'CPM)'),
+        axes=FALSE,
+        col = colors
+        )
+axis(2) # 2 = left 
+axis(1, # 1 = below 
+     at = 1:nsamples, # points at which tick-marks should be drawn
+     labels = colnames(log2cpm.tech),
+     las = 2,
+     cex.axis = 0.8 # size of axis
+     )
+
+# Second, look at dge.filtered
+boxplot(log2cpm.filtered, 
+        main="B. Filtered", 
+        xlab="", 
+        ylab=expression('Counts per gene (Log'[2]~'CPM)'),
+        axes=FALSE,
+        col = colors
+        )
+axis(2)
+axis(1, at=1:nsamples,labels=colnames(log2cpm.filtered),las=2,cex.axis=0.8)
+
+# Third, look at dge.norm
+boxplot(log2cpm.norm, 
+        main="C. Normalized", 
+        xlab="", 
+        ylab=expression('Counts per gene (Log'[2]~'CPM)'),
+        axes=FALSE,
+        col = colors)
+axis(2)
+axis(1,at=1:nsamples,labels=colnames(log2cpm.norm),las=2,cex.axis=0.8)
+
+# save
+path <- paste0("../../mouse_comparison/results/LPS_WT_gene_boxplot")
+saveToPDF(paste0(path, ".pdf"), width = 6, height = 4)
+```
+
+# Design matrix
+```{r design_matrix}
+group <- interaction(dge.filtered.norm$samples$condition)
+
+design <- model.matrix(~ 0 + group)
+colnames(design) <- c(treatment,control)
+
+design
+```
+
+# Voom
+```{r voom}
+# voom transform counts
+v <- voomWithQualityWeights(dge.filtered.norm,
+                            design,
+                            plot = TRUE)
+
+# fits linear model for each gene given a series of arrays
+fit <- lmFit(v, design)
+
+# contrast design for differential expression
+contrasts <- makeContrasts(
+  title = myContrasts,  # myContrasts was user input from beginning
+  levels = colnames(design))
+head(contrasts)
+
+# save contrast names
+allComparisons <- colnames(contrasts)
+allComparisons # check
+
+# run contrast analysis
+vfit <- contrasts.fit(fit, contrasts = contrasts)
+
+# Compute differential expression based on the empirical Bayes moderation of the
+# standard errors towards a common value.
+veBayesFit <- eBayes(vfit)
+plotSA(veBayesFit, main = "Final Model: Mean-variance Trend")
+```
+
+# Voom MDS Plot
+```{r MDS_voom}
+group_colors <- c(treatment_color, control_color)[v$targets$condition]
+names <- v$targets$sample
+
+plotMDS(
+  v, 
+  top = 100, 
+  labels = names,
+  cex = 1, 
+  dim.plot = c(1,2), 
+  plot = TRUE, 
+  col = group_colors
+)
+
+title(expression('Top 100 Genes - Voom (Log'[2]~'CPM)'))
+
+legend(
+  "bottom",
+  legend = c(control, treatment),
+  pch = 16,
+  col = c(control_color, treatment_color),
+  cex = 1
+)
+
+path <- paste0("../../mouse_comparison/results/LPS_WT_gene_MDS_normalized")
+```
+
+```{r save_EList}
+saveRDS(v, file = paste0("../../mouse_comparison/results/LPS_WT_gene_voom.rds"))
+```
+
+# Number of DEGs
+Identify number of differentially expressed genes.
+```{r decide_tests}
+pval <- 0.05
+
+sumTable <- 
+  summary(decideTests(
+    vfit,  # object
+    adjust.method = "BH", # by default the method = "separate"
+    p.value = pval,
+    lfc = 0  # numeric, minimum absolute log2-fold change required
+  ))
+
+print(paste0(tissue, " FDRq < ", pval))
+head(sumTable)
+```
+
+# Output DEG tables
+```{r output_DEG_tables, message=FALSE, warning=FALSE, echo=FALSE}
+coef <- 1
+
+for (i in allComparisons) {
+  
+  # p < 1, log2fc > 0 ----------------------------------------------------------
+  vTopTableAll <-
+    topTable(
+      veBayesFit, 
+      coef = coef,  
+      n = Inf, 
+      p.value = 1,
+      lfc = 0 
+    )
+  #output as txt file
+  path <- paste("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq1.00.txt", sep = "") 
+  write.table(
+    vTopTableAll,
+    path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+  
+  # p < 0.05, log2fc > 0 -------------------------------------------------------
+  vTopTable1 <-
+    topTable( 
+      veBayesFit,  
+      coef = coef,  
+      n = Inf, 
+      p.value = 0.05,
+      lfc = 0
+    )
+  path <- paste("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq0.05.txt", sep = "") 
+  write.table(
+    vTopTable1,
+    path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+  
+  # increment -----------------------------------------------------------------
+  coef <- coef + 1
+}
+```
+
+Read and save table with all genes (FDRq = 1).
+```{r read_DEG_table, message=FALSE, warning=FALSE, echo=FALSE}
+treatment_vs_control <- read.table(
+  paste0("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq1.00.txt", sep = ""),
+  header = TRUE,
+  sep = "\t",
+  stringsAsFactors = FALSE)
+
+saveRDS(treatment_vs_control, file = paste0("../../mouse_comparison/results/LPS_WT_gene_table.rds"))
+```
+
+# Assign colors
+Assign colors  values based on FDRq cutoff of 0.05.
+```{r assign_colors, message=FALSE, warning=FALSE, echo=FALSE}
+color_values <- vector()
+max <- nrow(treatment_vs_control)
+
+for(i in 1:max){
+  if (treatment_vs_control$adj.P.Val[i] < 0.05){
+    if (treatment_vs_control$logFC[i] > 0){
+      color_values <- c(color_values, 1) # 1 when logFC > 0 and FDRq < 0.05
+    }
+    else if (treatment_vs_control$logFC[i] < 0){
+      color_values <- c(color_values, 2) # 2 when logFC < 0 and FDRq < 0.05
+    }
+  }
+  else{
+    color_values <- c(color_values, 3) # 3 when FDRq >= 0.05
+  }
+}
+
+treatment_vs_control$color_p0.05 <- factor(color_values)
+```
+
+# Subset genes to label
+Subset the top 10 up and down-regulated genes
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+up <- treatment_vs_control[treatment_vs_control$color_p0.05 == 1,]
+up10 <- up[1:10,]
+
+down <- treatment_vs_control[treatment_vs_control$color_p0.05 == 2,]
+down <- subset(down, down$logFC < -1.5)
+down10 <- down[1:7,]
+```
+
+# Volcano plot
+```{r volcano}
+hadjpval <- (-log10(max(
+  treatment_vs_control$P.Value[treatment_vs_control$adj.P.Val < 0.05], 
+  na.rm=TRUE)))
+
+p_vol <-
+  ggplot(data = treatment_vs_control, 
+         aes(x = logFC,  # x-axis is logFC
+             y = -log10(P.Value),  # y-axis will be -log10 of P.Value
+             color = color_p0.05)) +  # color is based on factored color column
+  geom_point(alpha = 0.8, size = 1.7) +  # create scatterplot, alpha makes points transparent
+  theme_bw() +  # set color theme
+  theme(legend.position = "none") +  # no legend
+  scale_color_manual(values = c("red", "blue","grey")) +  # set factor colors
+  labs(
+    title = "", # no main title
+    x = expression(log[2](FC)), # x-axis title
+    y = expression(-log[10] ~ "(" ~ italic("p") ~ "-value)") # y-axis title
+  ) +
+  theme(axis.title.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.y = element_text(size = 10)) +
+  geom_hline(yintercept = hadjpval,  #  horizontal line
+                     colour = "#000000",
+                     linetype = "dashed") +
+  ggtitle(paste0("WT LPS vs WT Saline\nFDRq < 0.05")) +
+  theme(plot.title = element_text(size = 10)) +
+  geom_text_repel(data = up10,
+                  aes(x = logFC, y= -log10(P.Value), label = GeneName), 
+                  color = "maroon", 
+                  fontface="italic",
+                  size = 3, 
+                  max.overlaps = getOption("ggrepel.max.overlaps", default = 30)
+                  ) +
+  geom_text_repel(data = down10,
+                  aes(x = logFC, y= -log10(P.Value), label = GeneName), 
+                  color = "navyblue", 
+                  fontface="italic",
+                  size = 3, 
+                  max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
+  )
+
+p_vol
+
+# save
+path <- paste0("../../results/", tool, "/volcano/", treatment, "_",tolower(tissue),"_gene_volcano_FDRq0.05")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
+```
+# Compare between Kang et al. and the re-analysis 
+```{r}
+# Kang results
+Kang <-
+  read.delim("../../mouse_comparison/mouse_WT-LPS_over_WT.txt")
+mouse_limma <-
+  read.delim("../../mouse_comparison/results/LPS_WT_gene_DEGs_FDRq0.05.txt")
+
+# Venn diagram to see what is gained and lost between the reanalysis
+x = list(Kang = Kang$GeneName, rerun_mouse = mouse_limma$GeneName)
+ggvenn(
+  x,
+  fill_color = c("#0073C2FF", "#EFC000FF", "pink"),
+  stroke_size = 2,
+  set_name_size = 2
+)
+path <- paste0("../../mouse_comparison/results/Venn_Kang_vs_reanalysis")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+
+# what is unique to Kang
+GeneName <- setdiff(Kang$GeneName, mouse_limma$GeneName)
+Kang_unique_df <- as.data.frame(GeneName)
+# get the biotype information for the genes unique to Kang
+Kang_unique_df_biotype <-
+  subset(gene_biotype, GeneName %in% Kang_unique_df$GeneName)
+table(Kang_unique_df_biotype$Gene_Biotype)
+remove(GeneName)
+# what is unique to the re-analysis
+GeneName <- setdiff(mouse_limma$GeneName, Kang$GeneName)
+mouse_limma_unique_df <- as.data.frame(GeneName)
+# get the biotype information for the genes unique to Kang
+mouse_limma_unique_df_biotype <-
+  subset(gene_biotype, GeneName %in% mouse_limma_unique_df$GeneName)
+table(mouse_limma_unique_df_biotype$Gene_Biotype)
+```
+# Interactive Glimma
+```{r, error=TRUE, eval = FALSE, echo=FALSE}
+
+row.names(dge.filtered.norm$genes) <- make.names(dge.filtered.norm$genes$GeneName, unique = T)
+glimmaVolcano(veBayesFit, dge = dge.filtered.norm, groups = dge.filtered.norm$sample$condition)
+help(glimmaVolcano)
+dt <- decideTests(veBayesFit)
+summary(veBayesFit)
+#glMDPlot(veBayesFit, coef=1, status=dt, main=colnames(efit)[1],
+#         side.main="ENTREZID", counts=v$E, groups=TYPE, launch=T)
+
+TYPE <- as.factor(dge.filtered.norm$sample$condition)
+library(gplots)
+basal.vs.lp <- topTreat(veBayesFit, coef=1, n=Inf)
+basal.vs.lp.topgenes <- basal.vs.lp$GeneName[1:100]
+i <- which(v$genes$GeneName %in% basal.vs.lp.topgenes)
+mycol <- colorpanel(1000,"blue","white","red")
+heatmap.2(v$E[i,], scale="row",
+   labRow=v$genes$GeneName[i], labCol=TYPE, 
+   col=mycol, trace="none", density.info="none", 
+   margin=c(8,6), lhei=c(2,10), dendrogram="column")
+
+path <- paste0("../../mouse_comparison/results/LPS_WT_gene_FDRq0.05_heatmap")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+```
+
+```{r}
+sessionInfo()
+```
+
