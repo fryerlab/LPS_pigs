@@ -20,7 +20,7 @@ We have put together a workflow for inferring differential expression between sa
 `cd bulkRNA`\
 `mkdir bamstats  featureCounts  kallisto  rObjects  rawQC  rawfastq  results  starAligned  trimmedQC  trimmedReads`\
 `cd results`\
-`mkdir star kallisto`\
+`mkdir star kallisto`
 
 ### 2. align reads and generate quantification estimates
 We ran the data through two pipelines as it has been shown that most of the variation in our data can be explained by the choice of read aligner, see Olney et al. 2020. Therefore, we aligned the reads with star followed by RSEM for quantification and employed the pseudo aligner Kallisto. 
@@ -34,11 +34,13 @@ To run multiple samples in parallel use -j and the number of jobs to run.
 
 ### 3. preform differntial expression
 
-move to the results folder. Create sub directories.\ 
+move to the results folder. Create sub directories.
+ 
 `cd star`\
 `mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom`
 
-move into the kallisto results folder.\ 
+move into the kallisto results folder.
+
 `cd ../kallisto`\
 `mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM`
 
@@ -46,15 +48,10 @@ move to the scripts R folder.\
 `cd ../../scripts/R`\
 read over the gene DE.Rmd file to deteremine which tissue analysis you want to perform (Brain, Kidney, or Blood).
 
+Open up R and run the R script for gene level differential expression. 
+
+`R gene_DE.R`
 
 
 ### publicly available tools used in this analysis
-Tool | usage | citation
---- | --- |  ---
-Trimmomatic | Trim RNA-sequences for quality | Bolger AM, Lohse M, Usadel B. Trimmomatic: a flexible trimmer for Illumina sequence data. Bioinformatics. 2014;30: 2114–2120.
-SALMON | RNAseq read aligner | <salmon citation>
-STAR | RNAseq read aligner | Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, et al. STAR: ultrafast universal RNA-seq aligner. Bioinformatics. 2013;29: 15–21
-bamtools | analyzing and processing BAM files | Barnett DW, Garrison EK, Quinlan AR, Strömberg MP, Marth GT. BamTools: a C++ API and toolkit for analyzing and managing BAM files. Bioinformatics. 2011;27: 1691–1692.
-FeatureCounts | obtain raw transcriptome counts| Liao Y, Smyth GK, Shi W. featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics. 2014;30: 923–930.
-Limma/voom | differenital expression analysis | Law CW, Chen Y, Shi W, Smyth GK. voom: Precision weights unlock linear model analysis tools for RNA-seq read counts. Genome Biol. 2014;15: R29.
 

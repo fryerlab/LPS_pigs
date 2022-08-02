@@ -44,7 +44,7 @@ library(lattice)
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Kidney") # Kidney or Brain
+tissue <- c("Brain") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -380,6 +380,26 @@ so <- sleuth_prep(
     log2(x + 0.5),
   filter_target_id = keep_ids$target_ids
 )
+
+counts_filter <- sleuth_to_matrix(so, "obs_norm", "tpm")
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/TPM/",
+    treatment,
+    "_",
+    tissue,
+    "_obse_norm_TPM.txt",
+    sep = ""
+  )
+write.table(
+  counts_filter,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
 ```
 
 
@@ -449,7 +469,7 @@ In general, we can test models that are nested using the likelihood ratio test. 
 At this point the sleuth object constructed from the kallisto runs has information about the data, the experimental design, the kallisto estimates, the model fit, and the testing. In other words it contains the entire analysis of the data. 
 
 # Sleuth shiny 
-```{r sleuth_shiny, eval = FALSE}
+```{r sleuth_shiny, eval = TRUE}
 saveRDS(so,
         file = paste0(
           "../../rObjects/",
@@ -737,28 +757,7 @@ write.table(
   quote = FALSE
 )
 ```
-# box plot of transcripts 
-Sleuth also has some handy functions to plot expression of transcripts with bootstrap variation to visualize both biological and technical variation for selected transcripts:
-```{r plot_isoform_expression}
-# all isoforms of the genes that are DE
-# this is the same as the isoform_bias_table 
-all_iso_sig_genes <- sleuth_table_wt[sleuth_table_wt$gene_name %in% sleuth_significant$gene_name, ]
-
-path <- paste0("../../results/", tool, "/boxplot/", treatment, "_",tolower(tissue),"_isoforms")
-pdf(paste0(path, ".pdf"), width = 4, height = 4)
-
-# visualize both biological and technical variation for selected transcripts:
-# may use tpm or est_counts 
-violin_Func <- function(a, b){
-  iso <- plot_bootstrap(so, target_id = a, units = "tpm", color_by = "condition") + 
-    theme(legend.position = "none") + 
-    scale_fill_manual(values = c(control_color, treatment_color)) + 
-    labs(title = b, subtitle = a)
-  iso
-}
-# run the violin_Func
-violinPlots <- Map(violin_Func, a = all_iso_sig_genes$target_id, b = all_iso_sig_genes$gene_name)
-violinPlots
-dev.off()
+session information
+```{r}
+sessionInfo()
 ```
-
