@@ -44,7 +44,7 @@ library(lattice)
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Blood") # Kidney or Brain
+tissue <- c("Kidney") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -462,13 +462,27 @@ saveRDS(so,
         ))
 # sleuth_live(so)
 # results_table <- sleuth_results(so, 'reduced:full', test_type = 'lrt')
+```
 
+```{r}
+so <- readRDS(paste0(
+          "../../rObjects/",
+          treatment,
+          "_",
+          tool,
+          "_",
+          tolower(tissue),
+          "_sleuth.rds"
+        ))
 target_mapping <- so$target_mapping
 target_mapping_transcripts <- subset(target_mapping, type == "transcript")
 counts_filter <- sleuth_to_matrix(so, "obs_norm", "tpm")
 counts_filter_df <- as.data.frame(counts_filter)
 counts_filter_df$target_id <- rownames(counts_filter_df)
 counts_filter_df <- counts_filter_df[, c(11, 6, 7, 8, 9, 1, 2, 5, 10, 3, 4)]
+
+counts_filter_df_gene_name <- merge(counts_filter_df, target_mapping_transcripts, by = "target_id")
+counts_filter_df_gene_name <- counts_filter_df_gene_name[, c(1,16,17,18,2,3,4,5,6,7,8,9,10,11)]
 
 path <-
   paste(
@@ -482,7 +496,7 @@ path <-
     sep = ""
   )
 write.table(
-  counts_filter_df,
+  counts_filter_df_gene_name,
   path,
   sep = "\t",
   row.names = FALSE,
@@ -505,7 +519,6 @@ write.table(
   row.names = FALSE,
   quote = FALSE
 )
-
 ```
 
 # Sleuth output 
@@ -729,11 +742,55 @@ saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
 Do all isoforms of a gene show the same bias direction?\
 Do any isoforms of a gene show opposite expression patterns? I.e isoform 1 of geneA is up-regulated but isoform 2 of geneA is down-regulated?
 ```{r isoform count}
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_DEGs_FDRq1.0.txt",
+    sep = ""
+  )
+sleuth_table_wt <- read.delim(
+  path,
+  sep = "\t"
+)
+
+
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_DEGs_FDRq0.05.txt",
+    sep = ""
+  )
+sleuth_significant <- read.delim(
+  path,
+  sep = "\t"
+)
+
+
 # number of isoforms per gene
 # all genes from sleuth table
 numberOfIsoformsPerGene <- table(as.character(sleuth_table_wt$gene_name))
-# all significantly differentially expressed genes
 numberOfIsoformsPerGene <- as.data.frame(numberOfIsoformsPerGene)
+
+
+# number of isoforms per gene that are up-regulated
+sleuth_table_wt_up <- subset(sleuth_table_wt, b > 0 & qval < 0.05)
+numberOfIsoformsPerGene_up <- table(as.character(sleuth_table_wt_up$gene_name))
+numberOfIsoformsPerGene_up <- as.data.frame(numberOfIsoformsPerGene_up)
+
+# number of isoforms per gene that are down-regulated
+sleuth_table_wt_down <- subset(sleuth_table_wt, b < 0 & qval < 0.05)
+numberOfIsoformsPerGene_down <- table(as.character(sleuth_table_wt_down$gene_name))
+numberOfIsoformsPerGene_down <- as.data.frame(numberOfIsoformsPerGene_down)
 
 numberOfIsoformsPerGene_qval0.05 <-
   table(as.character(sleuth_significant$gene_name))
@@ -744,24 +801,40 @@ isoform_count_table <-
   merge(numberOfIsoformsPerGene,
         numberOfIsoformsPerGene_qval0.05, by = "Var1", all =TRUE)
 
+isoform_count_table_direction <- join_all(list(isoform_count_table,numberOfIsoformsPerGene_up,numberOfIsoformsPerGene_down), by = 'Var1')
 
 # rename columns
-names(isoform_count_table)[1] <- "gene_name"
-names(isoform_count_table)[2] <- "isoforms"
-names(isoform_count_table)[3] <- "isoforms_qval0.05"
+names(isoform_count_table_direction)[1] <- "gene_name"
+names(isoform_count_table_direction)[2] <- "isoforms"
+names(isoform_count_table_direction)[3] <- "isoforms_qval0.05"
+names(isoform_count_table_direction)[4] <- "isoforms_up"
+names(isoform_count_table_direction)[5] <- "isoforms_down"
+
+# replace na with zero 
+isoform_count_table_direction[is.na(isoform_count_table_direction)] <- 0
+
+# are isoforms showing the same direction?
+# subset to only look at isoforms that have at least two 
+isoform_count_table_direction$direction_of_isoforms <- ifelse(
+  isoform_count_table_direction$isoforms_qval0.05 == 0, 'neither', 
+  ifelse(isoform_count_table_direction$isoforms_up == isoform_count_table_direction$isoforms_qval0.05, 'same', 
+  ifelse(isoform_count_table_direction$isoforms_down == isoform_count_table_direction$isoforms_qval0.05, 'same', 'opposite')))
+
+
 # difference between total number of isoforms and isoforms of that gene called as DE, qval < 0.05
-isoform_count_table$diff <-
-  isoform_count_table$isoforms - isoform_count_table$isoforms_qval0.05
+isoform_count_table_direction$diff_in_total_iso_vs_qval_iso <-
+  isoform_count_table_direction$isoforms - isoform_count_table_direction$isoforms_qval0.05
 
 # genes that have multiple isoforms but not all isoforms are differential expressed, qval < 0.05
-isoform_bias <- subset(isoform_count_table, diff > 0)
+isoform_bias <- subset(isoform_count_table_direction, diff_in_total_iso_vs_qval_iso > 0)
 
 # merge  sleuth table with isoform count table to get all transcripts of the DE genes
 isoform_bias_table <-
-  merge(sleuth_table_wt, isoform_count_table, by = "gene_name")
+  merge(sleuth_table_wt, isoform_count_table_direction, by = "gene_name", all = TRUE)
 # remove columns that are repeated to clean up the table
 isoform_bias_table$TXNAME <- NULL
 isoform_bias_table$GENEID <- NULL
+
 path <-
   paste(
     "../../results/",
@@ -775,6 +848,27 @@ path <-
   )
 write.table(
   isoform_bias_table,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+isoform_bias_table_opposite <- subset(isoform_bias_table, direction_of_isoforms == "opposite")
+
+path <-
+  paste(
+    "../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_isoform_bias_FDRq0.05_opposite.txt",
+    sep = ""
+  )
+write.table(
+  isoform_bias_table_opposite,
   path,
   sep = "\t",
   row.names = FALSE,

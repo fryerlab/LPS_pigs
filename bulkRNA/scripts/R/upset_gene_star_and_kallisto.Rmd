@@ -1,0 +1,471 @@
+---
+title: "Upset Plot"
+author: "Kimberly Olney"
+date: "04/01/2022"
+output: html_document
+---
+
+# Setup
+
+```{r setup, include=FALSE}
+# Also do Session > Set Working Directory > Choose Directory
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r packages}
+library(UpSetR)
+library(ComplexUpset)
+library(ggplot2movies)
+library(ggplot2)
+```
+
+# Read in DEGs
+
+```{r}
+treatment <- "LPS"
+star_brain <- read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt", 
+                    header = TRUE, sep = "\t")
+star_kidney <- read.delim("../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+star_blood <- read.delim("../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+
+kallisto_brain <- read.delim("../../results/kallisto/DEGs/LPS_Brain_isoform_DEGs_FDRq0.05.txt", 
+                    header = TRUE, sep = "\t")
+kallisto_kidney <- read.delim("../../results/kallisto/DEGs/LPS_Kidney_isoform_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+kallisto_blood <- read.delim("../../results/kallisto/DEGs/LPS_Blood_isoform_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+```
+
+# Subset lists
+
+```{r}
+up_star_brain <- subset(star_brain$gene_name, star_brain$logFC > 0)
+down_star_brain <- subset(star_brain$gene_name, star_brain$logFC < 0)
+
+up_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC > 0)
+down_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC < 0)
+
+up_star_blood <- subset(star_blood$gene_name, star_blood$logFC > 0)
+down_star_blood <- subset(star_blood$gene_name, star_blood$logFC < 0)
+
+up_kallisto_brain <- subset(kallisto_brain$gene_name, kallisto_brain$b > 0)
+down_kallisto_brain <- subset(kallisto_brain$gene_name, kallisto_brain$b < 0)
+
+up_kallisto_kidney <- subset(kallisto_kidney$gene_name, kallisto_kidney$b > 0)
+down_kallisto_kidney <- subset(kallisto_kidney$gene_name, kallisto_kidney$b < 0)
+
+up_kallisto_blood <- subset(kallisto_blood$gene_name, kallisto_blood$b > 0)
+down_kallisto_blood <- subset(kallisto_blood$gene_name, kallisto_blood$b < 0)
+```
+
+# Save functions
+These functions with help simultaneously save plots as a png, pdf, and tiff 
+file.
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+
+saveToPNG <- function(...) {
+    d = dev.copy(png,...)
+    dev.off(d)
+}
+```
+
+# Binary list shared gene function
+```{r}
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+  }
+```
+
+# Upset all tissues 
+```{r}
+list_input <- list("Brain gene down-regulated" = down_star_brain,
+                   "Brain gene up-regulated" = up_star_brain,
+                   "Kidney gene down-regulated" = down_star_kidney,
+                   "Kidney gene up-regulated" = up_star_kidney,
+                   "Blood gene down-regulated" = down_star_blood,
+                   "Blood gene up-regulated" = up_star_blood,
+                   "Brain isoform down-regulated" = down_kallisto_brain,
+                   "Brain isoform up-regulated" = up_kallisto_brain,
+                   "Kidney isoform down-regulated" = down_kallisto_kidney,
+                   "Kidney isoform up-regulated" = up_kallisto_kidney,
+                   "Blood isoform down-regulated" = down_kallisto_blood,
+                   "Blood isoform up-regulated" = up_kallisto_blood)
+data <- fromList(list_input)
+
+upset_plot <- upset(data, set_sizes=FALSE,
+      c('Brain gene down-regulated','Brain gene up-regulated','Kidney gene down-regulated', 'Kidney gene up-regulated', 'Blood gene down-regulated', 'Blood gene up-regulated', 'Brain isoform down-regulated','Brain isoform up-regulated','Kidney isoform down-regulated', 'Kidney isoform up-regulated', 'Blood isoform down-regulated', 'Blood isoform up-regulated'),
+  queries=list(
+    upset_query(set='Brain gene down-regulated', fill='blue'),
+    upset_query(set='Brain gene up-regulated', fill='red'),
+    upset_query(set='Kidney gene down-regulated', fill='blue'),
+    upset_query(set='Kidney gene up-regulated', fill='red'),
+    upset_query(set='Blood gene down-regulated', fill='blue'),
+    upset_query(set='Blood gene up-regulated', fill='red'),
+    upset_query(set='Brain isoform down-regulated', fill='blue'),
+    upset_query(set='Brain isoform up-regulated', fill='red'),
+    upset_query(set='Kidney isoform down-regulated', fill='blue'),
+    upset_query(set='Kidney isoform up-regulated', fill='red'),
+    upset_query(set='Blood isoform down-regulated', fill='blue'),
+    upset_query(set='Blood isoform up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.05)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+ # set_sizes=(
+#    upset_set_size(geom=geom_bar(width=0.4))
+ #   + theme(
+#      axis.line.x=element_line(colour='black'),
+#      axis.ticks.x=element_line()
+#    )
+#  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+)
+upset_plot
+
+# save
+path <- "../../results/upset/LPS_brain_kidney_blood_star_and_kallisto_upset_plot"
+saveToPDF(paste0(path, ".pdf"), width = 15.5, height = 8)
+
+shared_up <- Reduce(intersect, list(up_star_kidney, up_star_brain, up_star_blood, up_kallisto_kidney, up_kallisto_brain, up_kallisto_blood))
+write.table(shared_up, "../../results/upset/LPS_brain_kidney_blood_star_and_kallisto_shared_up.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+shared_down <- Reduce(intersect, list(down_star_kidney, down_star_brain, down_star_blood, down_kallisto_kidney, down_kallisto_brain, down_kallisto_blood))
+write.table(shared_down, "../../results/upset/LPS_brain_kidney_blood_star_and_kallisto_shared_down.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Binary table with colnames:
+list_results <- fromList(list_input)
+write.table(list_results, "../../results/upset/LPS_upset_gene_list_binary_results_star_and_kallisto.txt", sep = "\t", quote = FALSE)
+
+# sanity check 
+list_results$gene <- row.names(list_results)
+subset(list_results, gene == "VIM")
+```
+
+# Upset per tissue
+```{r}
+# brain
+brain_input <- list("Brain gene down-regulated" = down_star_brain,
+                   "Brain gene up-regulated" = up_star_brain,
+                   "Brain isoform down-regulated" = down_kallisto_brain,
+                   "Brain isoform up-regulated" = up_kallisto_brain)
+brain_data <- fromList(brain_input)
+
+brain_upset <- upset(brain_data, set_sizes=FALSE,
+      c('Brain gene down-regulated','Brain gene up-regulated', 'Brain isoform down-regulated','Brain isoform up-regulated'),
+  queries=list(
+    upset_query(set='Brain gene down-regulated', fill='blue'),
+    upset_query(set='Brain gene up-regulated', fill='red'),
+    upset_query(set='Brain isoform down-regulated', fill='blue'),
+    upset_query(set='Brain isoform up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+ # set_sizes=(
+#    upset_set_size(geom=geom_bar(width=0.4))
+ #   + theme(
+#      axis.line.x=element_line(colour='black'),
+#      axis.ticks.x=element_line()
+#    )
+#  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+)
+brain_upset
+
+# save
+path <- "../../results/upset/LPS_brain_star_and_kallisto_upset_plot"
+saveToPDF(paste0(path, ".pdf"), width = 5, height = 4.5)
+
+shared_up <- Reduce(intersect, list(up_star_brain, up_kallisto_brain))
+write.table(shared_up, "../../results/upset/LPS_brain_star_and_kallisto_shared_up.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+shared_down <- Reduce(intersect, list(down_star_brain, down_kallisto_brain))
+write.table(shared_down, "../../results/upset/LPS_brain_star_and_kallisto_shared_down.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Binary table:
+brain_lists <- fromList(brain_input)
+write.table(brain_lists, "../../results/upset/LPS_upset_gene_list_binary_results_star_and_kallisto_brain.txt", sep = "\t", quote = FALSE)
+
+# kidney
+kidney_input <- list("Kidney gene down-regulated" = down_star_kidney,
+                   "Kidney gene up-regulated" = up_star_kidney,
+                   "Kidney isoform down-regulated" = down_kallisto_kidney,
+                   "Kidney isoform up-regulated" = up_kallisto_kidney)
+kidney_data <- fromList(kidney_input)
+
+kidney_upset <- upset(kidney_data, set_sizes=FALSE,
+      c('Kidney gene down-regulated','Kidney gene up-regulated', 'Kidney isoform down-regulated','Kidney isoform up-regulated'),
+  queries=list(
+    upset_query(set='Kidney gene down-regulated', fill='blue'),
+    upset_query(set='Kidney gene up-regulated', fill='red'),
+    upset_query(set='Kidney isoform down-regulated', fill='blue'),
+    upset_query(set='Kidney isoform up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+ # set_sizes=(
+#    upset_set_size(geom=geom_bar(width=0.4))
+ #   + theme(
+#      axis.line.x=element_line(colour='black'),
+#      axis.ticks.x=element_line()
+#    )
+#  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+) 
+kidney_upset
+
+# save
+path <- "../../results/upset/LPS_kidney_star_and_kallisto_upset_plot"
+saveToPDF(paste0(path, ".pdf"), width = 5, height = 4.5)
+
+shared_up <- Reduce(intersect, list(up_star_kidney, up_kallisto_kidney))
+write.table(shared_up, "../../results/upset/LPS_kidney_star_and_kallisto_shared_up.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+shared_down <- Reduce(intersect, list(down_star_kidney, down_kallisto_kidney))
+write.table(shared_down, "../../results/upset/LPS_kidney_star_and_kallisto_shared_down.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Binary table:
+kidney_lists <- fromList(kidney_input)
+write.table(kidney_lists, "../../results/upset/LPS_upset_gene_list_binary_results_star_and_kallisto_kidney.txt", sep = "\t", quote = FALSE)
+
+# blood
+blood_input <- list("Blood gene down-regulated" = down_star_blood,
+                   "Blood gene up-regulated" = up_star_blood,
+                   "Blood isoform down-regulated" = down_kallisto_blood,
+                   "Blood isoform up-regulated" = up_kallisto_blood)
+blood_data <- fromList(blood_input)
+
+blood_upset <- upset(blood_data, set_sizes=FALSE,
+      c('Blood gene down-regulated','Blood gene up-regulated', 'Blood isoform down-regulated','Blood isoform up-regulated'),
+  queries=list(
+    upset_query(set='Blood gene down-regulated', fill='blue'),
+    upset_query(set='Blood gene up-regulated', fill='red'),
+    upset_query(set='Blood isoform down-regulated', fill='blue'),
+    upset_query(set='Blood isoform up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+ # set_sizes=(
+#    upset_set_size(geom=geom_bar(width=0.4))
+ #   + theme(
+#      axis.line.x=element_line(colour='black'),
+#      axis.ticks.x=element_line()
+#    )
+#  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+) 
+blood_upset
+
+# save
+path <- "../../results/upset/LPS_blood_star_and_kallisto_upset_plot"
+saveToPDF(paste0(path, ".pdf"), width = 5, height = 4.5)
+
+shared_up <- Reduce(intersect, list(up_star_blood, up_kallisto_blood))
+write.table(shared_up, "../../results/upset/LPS_blood_star_and_kallisto_shared_up.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+shared_down <- Reduce(intersect, list(down_star_blood, down_kallisto_blood))
+write.table(shared_down, "../../results/upset/LPS_blood_star_and_kallisto_shared_down.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Binary table:
+blood_lists <- fromList(blood_input)
+write.table(blood_lists, "../../results/upset/LPS_upset_gene_list_binary_results_star_and_kallisto_blood.txt", sep = "\t", quote = FALSE)
+```
+# DE in star and kallisto, isoform bias table
+```{r}
+tissue <- "Blood"
+isoform_bias_table_opposite <-
+  read.delim(
+    paste0(
+      "../../results/kallisto/DEGs/",
+      treatment,
+      "_",
+      tissue,
+      "_isoform_bias_FDRq0.05_opposite.txt"
+    ),
+    sep = "\t"
+  )
+
+star_all_DEGs <-
+  read.delim(
+    paste0(
+      "../../results/star/DEGs/",
+      treatment,
+      "_",
+      tissue,
+      "_gene_DEGs_FDRq1.00.txt"
+    ),
+    header = TRUE,
+    sep = "\t"
+  )
+
+star_all_DEGs <- star_all_DEGs[, c(4, 8, 12)]
+
+df <-
+  merge(isoform_bias_table_opposite,
+        star_all_DEGs,
+        by = "gene_name",
+        all.x = TRUE)
+df$DE_in_Star <-
+  ifelse(
+    df$adj.P.Val < 0.05 &
+      df$logFC > 0,
+    "Yes; up",
+    ifelse(df$adj.P.Val < 0.05 & df$logFC <= 0, "Yes; down", "No")
+  )
+
+
+names(df)[25] <- "star_logFC"
+names(df)[26] <- "star_adj.P.val"
+
+
+# reorder and rename
+df <- df[,c(1,4,10,11,27,25,26, 2,3,5, 6,7,8,9,12,13,14,15,16,17,18,19,20,21,22,23)] 
+
+# write ouput
+path <-
+  paste(
+    "../../results/upset/",
+    treatment,
+    "_",
+    tissue,
+    "_opposite_isoform_bias_FDRq0.05_and_star_status.txt",
+    sep = ""
+  )
+write.table(
+  df,
+  path,
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+```
+

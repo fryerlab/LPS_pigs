@@ -617,7 +617,7 @@ path <-
   )
 saveToPDF(paste0(path, ".pdf"), width = 8.5, height = 5)
 ```
-# brain and kidney only 
+# Brain and kidney only 
 ```{r}
 list_input <- list("Brain down" = down_star_brain,
                    "Kidney down" = down_star_kidney,

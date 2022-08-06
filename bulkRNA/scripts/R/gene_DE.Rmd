@@ -37,7 +37,7 @@ library(lattice)
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Blood") # Kidney or Brain
+tissue <- c("Kidney") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -520,6 +520,22 @@ lcpm <- lcpm[, c(2, 3, 4, 5, 7, 8, 1, 6, 9, 10)]
 path <- paste0("../../results/", tool, "/CPM/", treatment, "_",tolower(tissue),
                "_gene_lcpm_expression.txt")
 write.table(cpm, path, quote = FALSE, sep = "\t")
+
+
+protein_coding_genes <- read.delim(paste0(
+      "../../results/",
+      tool,
+      "/v7_ensembl_protein_coding_genes.txt"))
+protein_coding_genes_gene <- subset(protein_coding_genes, type == "gene") 
+lcpm <- read.delim(paste0("../../results/", tool, "/CPM/", treatment, "_",tolower(tissue),
+               "_gene_lcpm_expression.txt"))
+lcpm$gene_id <- row.names(lcpm)
+lcpm_gene_name <- merge(lcpm, protein_coding_genes_gene, by = "gene_id")
+
+lcpm_gene_name <- lcpm_gene_name[, c(1, 15, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)]
+path <- paste0("../../results/", tool, "/CPM/", treatment, "_",tolower(tissue),
+               "_gene_lcpm_expression_gene_name.txt")
+write.table(lcpm_gene_name, path, quote = FALSE, sep = "\t", row.names = FALSE)
 ```
 # Voom
 ```{r voom}

@@ -87,6 +87,19 @@ mouse_limma_FDRq1.00_orth <-
   merge(mouse_limma_FDRq1.00, human_mouse_orth, by = "GeneID")
 mouse_limma_FDRq0.05_orth <-
   merge(mouse_limma_FDRq0.05, human_mouse_orth, by = "GeneID")
+
+subset(mouse_limma_FDRq1.00_orth, ortholog_name == "BEX2")
+subset(pig_brain_FDRq1.00_orth, ortholog_name == "BEX2")
+
+pig_gene_name_dups <- human_pig_orth[duplicated(human_pig_orth$ortholog_name),]
+pig_gene_name_dups_unique <- unique(pig_gene_name_dups$ortholog_name)
+
+mouse_gene_name_dups <- human_mouse_orth[duplicated(human_mouse_orth$ortholog_name),]
+mouse_gene_name_dups_unique <- unique(mouse_gene_name_dups$ortholog_name)
+
+library(gtools)
+test <-
+  merge(mouse_limma_FDRq1.00_orth, pig_brain_FDRq1.00_orth, by = "ortholog_name",  all=T)
 ```
 
 # Find shared and unique DEGs between mouse and pig
@@ -112,6 +125,15 @@ uniqueToMouse <-
 uniqueToPig <-
   mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToPig_gene_name,]
 
+
+shared_t <-
+  test[test$ortholog_name %in% shared_gene_name,]
+uniqueToMouse_t <-
+  test[test$ortholog_name %in% uniqueToMouse_gene_name,]
+uniqueToPig_t <-
+  test[test$ortholog_name %in% uniqueToPig_gene_name,]
+testtest <- subset(uniqueToPig_t, gene_name != "NA")
+
 # Venn diagram to see total DEGs between mouse and pig
 x = list(mouse = mouse_limma_FDRq0.05_orth$ortholog_name,
          pig = pig_brain_FDRq0.05_orth$ortholog_name)
@@ -131,6 +153,7 @@ path <-
   paste0("../../mouse_comparison/results/Venn_mouse_and_pig_brain")
 saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
 ```
+
 # Output shared and unique DEGs as tables
 ```{r}
 #output table
@@ -217,41 +240,6 @@ p <-
 
 ggplotly(p)
 ```
-write table
-```{r}
-# difference between the mouse and pig fold change
-shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
-# add direction information. 
-# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
-shared$direction_value <- shared$logFC.x * shared$logFC.y
-
-df_shared <- shared %>%
-  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
-
-# now reformat the whole dataframe to be pretty and legible
-df_shared <-
-  df_shared[, c(1, 9, 13, 34, 38, 46, 48)]
-# rename columns
-data.table::setnames(
-  df_shared,
-  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
-  new = c(
-    'mouse_logFC',
-    'mouse_adj.P.Val',
-    'pig_logFC',
-    'pig_adj.P.Val'
-  )
-)
-
-#output table
-write.table(
-  df_shared,
-  "../../mouse_comparison/results/df_shared_mouse_pig.txt",
-  sep = "\t",
-  quote = F,
-  row.names = F
-)
-```
 
 ### Unique to mouse DEGs
 ```{r}
@@ -310,37 +298,7 @@ p <-
 
 ggplotly(p)
 ```
-write table
-```{r}
-uniqueToMouse$logFC_difference <-
-  (uniqueToMouse$logFC.x - uniqueToMouse$logFC.y)
-uniqueToMouse$direction_value <-
-  uniqueToMouse$logFC.x * uniqueToMouse$logFC.y
 
-df_uniqueToMouse <- uniqueToMouse %>%
-  mutate(direction_status = if_else(uniqueToMouse$direction_value < 0, "opposite", "same"))
-
-df_uniqueToMouse <-
-  df_uniqueToMouse[, c(1, 9, 13, 34, 38, 46, 48)]  # returns a data.frame
-data.table::setnames(
-  df_uniqueToMouse,
-  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
-  new = c(
-    'mouse_logFC',
-    'mouse_adj.P.Val',
-    'pig_logFC',
-    'pig_adj.P.Val'
-  )
-)
-
-write.table(
-  df_uniqueToMouse,
-  "../../mouse_comparison/results/df_uniqueToMouse.txt",
-  sep = "\t",
-  quote = F,
-  row.names = F
-)
-```
 ### Unique to pig DEGs
 ```{r}
 shapiro.test(uniqueToPig$logFC.x)
@@ -398,24 +356,102 @@ p <-
        y = "pig")
 ggplotly(p)
 ```
-
+# Write output tables
+### shared 
 ```{r}
-uniqueToPig$logFC_difference <-
-  (uniqueToPig$logFC.x - uniqueToPig$logFC.y)
-uniqueToPig$direction_value <-
-  uniqueToPig$logFC.x * uniqueToPig$logFC.y
+# difference between fold change
+shared$logFC_difference <- (shared$logFC.x - shared$logFC.y)
+# add direction information. 
+# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
+shared$direction_value <- shared$logFC.x * shared$logFC.y
+
+df_shared <- shared %>%
+  mutate(direction_status = if_else(shared$direction_value < 0, "opposite", "same"))
+
+# now reformat the whole dataframe to be pretty and legible
+df_shared <-
+  df_shared[, c(1,2,9,13,21,28,32,40,42)]
+# rename columns
+data.table::setnames(
+  df_shared,
+  old = c('GeneID','logFC.x', 'adj.P.Val.x', 'gene_id', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'mouse_gene_id',
+    'mouse_logFC',
+    'mouse_adj.P.Val',
+    'pig_gene_id',
+    'pig_logFC',
+    'pig_adj.P.Val'
+  )
+)
+
+write.table(
+  df_shared,
+  "../../mouse_comparison/results/df_shared_mouse_pig.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+### unique to mouse
+```{r}
+# difference between fold change
+uniqueToMouse$logFC_difference <- (uniqueToMouse$logFC.x - uniqueToMouse$logFC.y)
+# add direction information. 
+# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
+uniqueToMouse$direction_value <- uniqueToMouse$logFC.x * uniqueToMouse$logFC.y
+
+df_uniqueToMouse <- uniqueToMouse %>%
+  mutate(direction_status = if_else(uniqueToMouse$direction_value < 0, "opposite", "same"))
+
+# now reformat the whole dataframe to be pretty and legible
+df_uniqueToMouse <-
+  df_uniqueToMouse[, c(1,2,9,13,21,28,32,40,42)]
+# rename columns
+data.table::setnames(
+  df_uniqueToMouse,
+  old = c('GeneID','logFC.x', 'adj.P.Val.x', 'gene_id', 'logFC.y', 'adj.P.Val.y'),
+  new = c(
+    'mouse_gene_id',
+    'mouse_logFC',
+    'mouse_adj.P.Val',
+    'pig_gene_id',
+    'pig_logFC',
+    'pig_adj.P.Val'
+  )
+)
+
+write.table(
+  df_uniqueToMouse,
+  "../../mouse_comparison/results/df_uniqueToMouse_mouse_pig.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+### unique to pig
+```{r}
+# difference between fold change
+uniqueToPig$logFC_difference <- (uniqueToPig$logFC.x - uniqueToPig$logFC.y)
+# add direction information. 
+# Is the gene down-regulated or up-regulated in both the mouse and pig data sets
+uniqueToPig$direction_value <- uniqueToPig$logFC.x * uniqueToPig$logFC.y
 
 df_uniqueToPig <- uniqueToPig %>%
   mutate(direction_status = if_else(uniqueToPig$direction_value < 0, "opposite", "same"))
 
+# now reformat the whole dataframe to be pretty and legible
 df_uniqueToPig <-
-  df_uniqueToPig[, c(1, 9, 13, 34, 38, 46, 48)]  # returns a data.frame
+  df_uniqueToPig[, c(1,2,9,13,21,28,32,40,42)]
+# rename columns
 data.table::setnames(
   df_uniqueToPig,
-  old = c('logFC.x', 'adj.P.Val.x', 'logFC.y', 'adj.P.Val.y'),
+  old = c('GeneID','logFC.x', 'adj.P.Val.x', 'gene_id', 'logFC.y', 'adj.P.Val.y'),
   new = c(
+    'mouse_gene_id',
     'mouse_logFC',
     'mouse_adj.P.Val',
+    'pig_gene_id',
     'pig_logFC',
     'pig_adj.P.Val'
   )
@@ -423,7 +459,7 @@ data.table::setnames(
 
 write.table(
   df_uniqueToPig,
-  "../../mouse_comparison/results/df_uniqueToPig.txt",
+  "../../mouse_comparison/results/df_uniqueToPig_mouse_pig.txt",
   sep = "\t",
   quote = F,
   row.names = F
