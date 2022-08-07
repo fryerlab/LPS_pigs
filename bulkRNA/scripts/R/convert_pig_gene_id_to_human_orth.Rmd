@@ -1,0 +1,89 @@
+---
+title: "Get human ortholog for pig gene names"
+author: "Kimberly Olney"
+date: "7/26/2022"
+output:
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+library(geneName)
+library(plotly)
+library(tidyverse)
+library(htmlwidgets)
+library(ggvenn)
+library(dplyr)
+library(gprofiler2)
+library(stats)
+```
+
+# Read in DEG tables
+```{r}
+pig_brain_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt")
+
+pig_kidney_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq1.00.txt")
+
+pig_blood_FDRq1.00 <-
+  read.delim("../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq1.00.txt")
+```
+
+# Orthologs
+Convert mouse and pig gene_ids to human gene symbols 
+https://cran.r-project.org/web/packages/gprofiler2/vignettes/gprofiler2.html
+```{r}
+human_pig_brain_orth <-
+  gorth(
+    query = pig_brain_FDRq1.00$gene_id,
+    source_organism = "sscrofa",
+    target_organism = "hsapiens",
+    mthreshold = Inf,
+    filter_na = TRUE,
+    numeric_ns = "ENTREZGENE_ACC"
+  )
+
+human_pig_kidney_orth <-
+  gorth(
+    query = pig_brain_FDRq1.00$gene_id,
+    source_organism = "sscrofa",
+    target_organism = "hsapiens",
+    mthreshold = Inf,
+    filter_na = TRUE,
+    numeric_ns = "ENTREZGENE_ACC"
+  )
+
+human_pig_blood_orth <-
+  gorth(
+    query = pig_brain_FDRq1.00$gene_id,
+    source_organism = "sscrofa",
+    target_organism = "hsapiens",
+    mthreshold = Inf,
+    filter_na = TRUE,
+    numeric_ns = "ENTREZGENE_ACC"
+  )
+```
+# Merge ortholog name with the species gene id
+```{r}
+# add column for downstream merging
+human_pig_orth$gene_id <- human_pig_orth$input
+pig_brain_FDRq1.00_orth <-
+  merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id")
+pig_brain_FDRq0.05_orth <-
+  merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id")
+# remove duplicates and save as a separate table for down stream investigation. 
+pig_n_occur <- data.frame(table(pig_brain_FDRq1.00_orth$ortholog_name))
+names(pig_n_occur)[names(pig_n_occur) == 'Var1'] <- 'ortholog_name'
+names(pig_n_occur)[names(pig_n_occur) == 'Freq'] <- 'ortholog_name_frequency'
+pig_orth_gene_freq <- merge(pig_brain_FDRq1.00_orth, pig_n_occur, by = "ortholog_name", all.x = TRUE)
+

@@ -33,11 +33,12 @@ library(plyr)
 library(gridExtra)
 library(grid)
 library(lattice)
+library(data.table)
 ```
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Kidney") # Kidney or Brain
+tissue <- c("Blood") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -812,6 +813,10 @@ path <-
     "_gene_volcano_FDRq0.05"
   )
 saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
+```
+# Glimma output
+```{r}
+glimmaVolcano(veBayesFit, dge = dge.filtered.norm, groups = dge.filtered.norm$samples$group, display.columns=c("gene_name", "AdjPValue", "Chr"))
 ```
 
 ```{r}

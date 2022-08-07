@@ -59,7 +59,7 @@ human_mouse_orth <-
     source_organism = "mmusculus",
     target_organism = "hsapiens",
     mthreshold = Inf,
-    filter_na = TRUE,
+    filter_na = TRUE, 
     numeric_ns = "ENTREZGENE_ACC"
   )
 
@@ -81,42 +81,110 @@ pig_brain_FDRq1.00_orth <-
   merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id")
 pig_brain_FDRq0.05_orth <-
   merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id")
+# remove duplicates and save as a separate table for down stream investigation. 
+pig_n_occur <- data.frame(table(pig_brain_FDRq1.00_orth$ortholog_name))
+names(pig_n_occur)[names(pig_n_occur) == 'Var1'] <- 'ortholog_name'
+names(pig_n_occur)[names(pig_n_occur) == 'Freq'] <- 'ortholog_name_frequency'
+pig_orth_gene_freq <- merge(pig_brain_FDRq1.00_orth, pig_n_occur, by = "ortholog_name", all.x = TRUE)
 
+pig_brain_FDRq1.00_orth_1n <- pig_brain_FDRq1.00_orth[pig_brain_FDRq1.00_orth$ortholog_name %in% pig_n_occur$ortholog_name[pig_n_occur$ortholog_name_frequency == 1],]
+
+pig_brain_FDRq1.00_orth_dups <- pig_brain_FDRq1.00_orth[pig_brain_FDRq1.00_orth$ortholog_name %in% pig_n_occur$ortholog_name[pig_n_occur$ortholog_name_frequency > 1],]
+#remove(pig_n_occur)
+
+#pig_n_occur <- data.frame(table(pig_brain_FDRq0.05_orth$ortholog_name))
+#pig_n_occur[pig_n_occur$ortholog_name_frequency > 1,]
+pig_brain_FDRq0.05_orth_1n <- pig_brain_FDRq0.05_orth[pig_brain_FDRq0.05_orth$ortholog_name %in% pig_n_occur$ortholog_name[pig_n_occur$ortholog_name_frequency == 1],]
+
+pig_brain_FDRq0.05_orth_dups <- pig_brain_FDRq0.05_orth[pig_brain_FDRq0.05_orth$ortholog_name %in% pig_n_occur$ortholog_name[pig_n_occur$ortholog_name_frequency > 1],]
+# output as data frames
+write.table(
+  pig_orth_gene_freq,
+  "../../mouse_comparison/results/pig_brain_FDRq1.00_orth.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  pig_brain_FDRq1.00_orth_dups,
+  "../../mouse_comparison/results/pig_brain_FDRq1.00_orth_dups.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  pig_brain_FDRq1.00_orth_1n,
+  "../../mouse_comparison/results/pig_brain_FDRq1.00_orth_1n.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+```
+
+```{r}
 human_mouse_orth$GeneID <- human_mouse_orth$input
 mouse_limma_FDRq1.00_orth <-
   merge(mouse_limma_FDRq1.00, human_mouse_orth, by = "GeneID")
 mouse_limma_FDRq0.05_orth <-
   merge(mouse_limma_FDRq0.05, human_mouse_orth, by = "GeneID")
 
-subset(mouse_limma_FDRq1.00_orth, ortholog_name == "BEX2")
-subset(pig_brain_FDRq1.00_orth, ortholog_name == "BEX2")
+mouse_n_occur <- data.frame(table(mouse_limma_FDRq1.00_orth$ortholog_name))
+names(mouse_n_occur)[names(mouse_n_occur) == 'Var1'] <- 'ortholog_name'
+names(mouse_n_occur)[names(mouse_n_occur) == 'Freq'] <- 'ortholog_name_frequency'
+mouse_orth_gene_freq <- merge(mouse_limma_FDRq1.00_orth, mouse_n_occur, by = "ortholog_name", all.x = TRUE)
 
-pig_gene_name_dups <- human_pig_orth[duplicated(human_pig_orth$ortholog_name),]
-pig_gene_name_dups_unique <- unique(pig_gene_name_dups$ortholog_name)
+mouse_limma_FDRq1.00_orth_1n <- mouse_limma_FDRq1.00_orth[mouse_limma_FDRq1.00_orth$ortholog_name %in% mouse_n_occur$ortholog_name[mouse_n_occur$ortholog_name_frequency == 1],]
 
-mouse_gene_name_dups <- human_mouse_orth[duplicated(human_mouse_orth$ortholog_name),]
-mouse_gene_name_dups_unique <- unique(mouse_gene_name_dups$ortholog_name)
+mouse_limma_FDRq1.00_orth_dups <- mouse_limma_FDRq1.00_orth[mouse_limma_FDRq1.00_orth$ortholog_name %in% mouse_n_occur$ortholog_name[mouse_n_occur$ortholog_name_frequency > 1],]
 
-library(gtools)
-test <-
-  merge(mouse_limma_FDRq1.00_orth, pig_brain_FDRq1.00_orth, by = "ortholog_name",  all=T)
+
+mouse_limma_FDRq0.05_orth_1n <- mouse_limma_FDRq0.05_orth[mouse_limma_FDRq0.05_orth$ortholog_name %in% mouse_n_occur$ortholog_name[mouse_n_occur$ortholog_name_frequency == 1],]
+
+mouse_limma_FDRq0.05_orth_dups <- mouse_limma_FDRq0.05_orth[mouse_limma_FDRq0.05_orth$ortholog_name %in% mouse_n_occur$ortholog_name[mouse_n_occur$ortholog_name_frequency > 1],]
+
+# output as data frames
+write.table(
+  mouse_orth_gene_freq,
+  "../../mouse_comparison/results/mouse_limma_FDRq1.00_orth.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  mouse_limma_FDRq1.00_orth_dups,
+  "../../mouse_comparison/results/mouse_limma_FDRq1.00_orth_dups.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
+
+write.table(
+  mouse_limma_FDRq1.00_orth_1n,
+  "../../mouse_comparison/results/mouse_limma_FDRq1.00_orth_1n.txt",
+  sep = "\t",
+  quote = F,
+  row.names = F
+)
 ```
 
 # Find shared and unique DEGs between mouse and pig
 ```{r}
 # rename GeneName to gene_name to merge data sets and find intersections
 mouse_and_pg_df <-
-  merge(mouse_limma_FDRq1.00_orth, pig_brain_FDRq1.00_orth, by = "ortholog_name")
+  merge(mouse_limma_FDRq1.00_orth_1n, pig_brain_FDRq1.00_orth_1n, by = "ortholog_name")
 
 shared_gene_name <-
-  intersect(mouse_limma_FDRq0.05_orth$ortholog_name,
-            pig_brain_FDRq0.05_orth$ortholog_name)
+  intersect(mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+            pig_brain_FDRq0.05_orth_1n$ortholog_name)
 uniqueToMouse_gene_name <-
-  setdiff(mouse_limma_FDRq0.05_orth$ortholog_name,
-          pig_brain_FDRq0.05_orth$ortholog_name)
+  setdiff(mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+          pig_brain_FDRq0.05_orth_1n$ortholog_name)
 uniqueToPig_gene_name <-
-  setdiff(pig_brain_FDRq0.05_orth$ortholog_name,
-          mouse_limma_FDRq0.05_orth$ortholog_name)
+  setdiff(pig_brain_FDRq0.05_orth_1n$ortholog_name,
+          mouse_limma_FDRq0.05_orth_1n$ortholog_name)
 
 shared <-
   mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% shared_gene_name,]
@@ -125,14 +193,6 @@ uniqueToMouse <-
 uniqueToPig <-
   mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToPig_gene_name,]
 
-
-shared_t <-
-  test[test$ortholog_name %in% shared_gene_name,]
-uniqueToMouse_t <-
-  test[test$ortholog_name %in% uniqueToMouse_gene_name,]
-uniqueToPig_t <-
-  test[test$ortholog_name %in% uniqueToPig_gene_name,]
-testtest <- subset(uniqueToPig_t, gene_name != "NA")
 
 # Venn diagram to see total DEGs between mouse and pig
 x = list(mouse = mouse_limma_FDRq0.05_orth$ortholog_name,
