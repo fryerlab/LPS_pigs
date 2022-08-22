@@ -78,9 +78,10 @@ human_pig_orth <-
 # add column for downstream merging
 human_pig_orth$gene_id <- human_pig_orth$input
 pig_brain_FDRq1.00_orth <-
-  merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id")
+  merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id", all.x = TRUE)
+
 pig_brain_FDRq0.05_orth <-
-  merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id")
+  merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id", all.x = TRUE)
 # remove duplicates and save as a separate table for down stream investigation. 
 pig_n_occur <- data.frame(table(pig_brain_FDRq1.00_orth$ortholog_name))
 names(pig_n_occur)[names(pig_n_occur) == 'Var1'] <- 'ortholog_name'
@@ -126,9 +127,9 @@ write.table(
 ```{r}
 human_mouse_orth$GeneID <- human_mouse_orth$input
 mouse_limma_FDRq1.00_orth <-
-  merge(mouse_limma_FDRq1.00, human_mouse_orth, by = "GeneID")
+  merge(mouse_limma_FDRq1.00, human_mouse_orth, by = "GeneID", all.x = TRUE)
 mouse_limma_FDRq0.05_orth <-
-  merge(mouse_limma_FDRq0.05, human_mouse_orth, by = "GeneID")
+  merge(mouse_limma_FDRq0.05, human_mouse_orth, by = "GeneID", all.x = TRUE)
 
 mouse_n_occur <- data.frame(table(mouse_limma_FDRq1.00_orth$ortholog_name))
 names(mouse_n_occur)[names(mouse_n_occur) == 'Var1'] <- 'ortholog_name'

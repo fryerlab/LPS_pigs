@@ -29,6 +29,7 @@ library(stats)
 
 # Read in DEG tables
 ```{r}
+tool <- "star"
 pig_brain_FDRq1.00 <-
   read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt")
 
@@ -74,16 +75,201 @@ human_pig_blood_orth <-
   )
 ```
 # Merge ortholog name with the species gene id
+### Brain
 ```{r}
-# add column for downstream merging
-human_pig_orth$gene_id <- human_pig_orth$input
-pig_brain_FDRq1.00_orth <-
-  merge(pig_brain_FDRq1.00, human_pig_orth, by = "gene_id")
-pig_brain_FDRq0.05_orth <-
-  merge(pig_brain_FDRq0.05, human_pig_orth, by = "gene_id")
-# remove duplicates and save as a separate table for down stream investigation. 
-pig_n_occur <- data.frame(table(pig_brain_FDRq1.00_orth$ortholog_name))
-names(pig_n_occur)[names(pig_n_occur) == 'Var1'] <- 'ortholog_name'
-names(pig_n_occur)[names(pig_n_occur) == 'Freq'] <- 'ortholog_name_frequency'
-pig_orth_gene_freq <- merge(pig_brain_FDRq1.00_orth, pig_n_occur, by = "ortholog_name", all.x = TRUE)
+tissue <- "Brain"
+treatment <- "LPS"
 
+human_pig_brain_orth$gene_id <- human_pig_brain_orth$input
+pig_brain_FDRq1.00_orth <-
+  merge(pig_brain_FDRq1.00,
+        human_pig_brain_orth,
+        by = "gene_id",
+        all.x = TRUE)
+
+pig_brain_FDRq1.00_orth <-
+  pig_brain_FDRq1.00_orth %>% mutate(ortholog_name = coalesce(ortholog_name, gene_name))
+pig_brain_FDRq0.05_up_regulated <- subset(pig_brain_FDRq1.00_orth, logFC > 0 & adj.P.Val < 0.05)
+pig_brain_FDRq0.05_down_regulated <- subset(pig_brain_FDRq1.00_orth, logFC < 0 & adj.P.Val < 0.05)
+
+write.table(
+  pig_brain_FDRq1.00_orth,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq1.00_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+write.table(
+  pig_brain_FDRq0.05_up_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_up_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+
+write.table(
+  pig_brain_FDRq0.05_down_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_down_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```
+### Kidney
+```{r}
+tissue <- "Kidney"
+treatment <- "LPS"
+
+human_pig_kidney_orth$gene_id <- human_pig_kidney_orth$input
+pig_kidney_FDRq1.00_orth <-
+  merge(pig_kidney_FDRq1.00,
+        human_pig_kidney_orth,
+        by = "gene_id",
+        all.x = TRUE)
+
+pig_kidney_FDRq1.00_orth <-
+  pig_kidney_FDRq1.00_orth %>% mutate(ortholog_name = coalesce(ortholog_name, gene_name))
+pig_kidney_FDRq0.05_up_regulated <- subset(pig_kidney_FDRq1.00_orth, logFC > 0 & adj.P.Val < 0.05)
+pig_kidney_FDRq0.05_down_regulated <- subset(pig_kidney_FDRq1.00_orth, logFC < 0 & adj.P.Val < 0.05)
+
+write.table(
+  pig_kidney_FDRq1.00_orth,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq1.00_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+write.table(
+  pig_kidney_FDRq0.05_up_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_up_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+
+write.table(
+  pig_kidney_FDRq0.05_down_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_down_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```
+### Blood
+```{r}
+tissue <- "blood"
+treatment <- "LPS"
+
+human_pig_blood_orth$gene_id <- human_pig_blood_orth$input
+pig_blood_FDRq1.00_orth <-
+  merge(pig_blood_FDRq1.00,
+        human_pig_blood_orth,
+        by = "gene_id",
+        all.x = TRUE)
+
+pig_blood_FDRq1.00_orth <-
+  pig_blood_FDRq1.00_orth %>% mutate(ortholog_name = coalesce(ortholog_name, gene_name))
+pig_blood_FDRq0.05_up_regulated <- subset(pig_blood_FDRq1.00_orth, logFC > 0 & adj.P.Val < 0.05)
+pig_blood_FDRq0.05_down_regulated <- subset(pig_blood_FDRq1.00_orth, logFC < 0 & adj.P.Val < 0.05)
+
+write.table(
+  pig_blood_FDRq1.00_orth,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq1.00_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+write.table(
+  pig_blood_FDRq0.05_up_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_up_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
+
+write.table(
+  pig_blood_FDRq0.05_down_regulated,
+  paste0(
+    "../../results/",
+    tool,
+    "/gprofiler/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq0.05_down_regulated_orth.txt"
+  ),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```

@@ -1,0 +1,232 @@
+---
+title: "gprofiler2"
+author: "Kimberly Olney & Kennedi Todd"
+date: "2/14/2022"
+output: html_document
+---
+# gprofiler for gene enrichment analysis
+A web version of gprofiler is available here: https://biit.cs.ut.ee/gprofiler/gost 
+A vignette is here: https://cran.r-project.org/web/packages/gprofiler2/vignettes/gprofiler2.html#gene-identifier-conversion-with-gconvert 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+# Save functions
+These functions with help simultaneously save plots as a png, pdf, and tiff 
+file.
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+
+saveToPNG <- function(...) {
+    d = dev.copy(png,...)
+    dev.off(d)
+}
+```
+
+```{r packages}
+library(gprofiler2)
+library(DESeq2)
+library(airway)
+library(enrichplot)
+library(DOSE) 
+library(plyr)
+library(ggplot2)
+require(gridExtra)
+library(ggpubr)
+library(scales)
+library(forcats)
+```
+
+# User defined variables
+```{r set_variables}
+tissue <- c("Brain") # Kidney or Brain
+control <- "Saline"
+treatment <- "LPS"
+control_color <- "gray29"
+treatment_color <- "purple"
+tool = c("star")
+```
+# Read in DEGs
+The DEGs are already ordered by smallest to largest adjusted p-value.
+```{r}
+star_brain <- read.delim("../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt", 
+                    header = TRUE, sep = "\t")
+star_kidney <- read.delim("../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+```
+
+# Subset lists
+sort = FALSE so that the order of the DEGs remains. The DEGs are ordered by adjusted p-value
+```{r}
+# sort by fold change. Biggest fold change is the first gene
+star_brain_sort_positiveFC <- star_brain[order(-star_brain$adj.P.Val),]
+# now repeat for negative fold changes
+star_brain_sort_negativeFC <- star_brain[order(star_brain$adj.P.Val),]
+
+star_kidney_sort_positiveFC <- star_kidney[order(-star_kidney$adj.P.Val),]
+star_kidney_sort_negativeFC <- star_kidney[order(star_kidney$adj.P.Val),]
+
+# when subsetting, keep the order. I.e sort = FALSE. Do not resort 
+up_star_brain <- subset(star_brain_sort_positiveFC$gene_name, star_brain_sort_positiveFC$logFC > 0, sort = FALSE)
+down_star_brain <- subset(star_brain_sort_negativeFC$gene_name, star_brain_sort_negativeFC$logFC < 0, sort = FALSE)
+
+up_star_kidney <- subset(star_kidney_sort_positiveFC$gene_name, star_kidney_sort_positiveFC$logFC > 0, sort = FALSE)
+down_star_kidney <- subset(star_kidney_sort_negativeFC$gene_name, star_kidney_sort_negativeFC$logFC < 0, sort = FALSE)
+```
+
+# Enrichment analysis
+ordered_query = TRUE specify that the genes are in a meaningful order. They are ordered by adjusted p-value. 
+```{r}
+gp_up <- gost(up_star_brain, ordered_query = TRUE, organism = "sscrofa")
+gp_down <- gost(down_star_brain, ordered_query = TRUE, organism = "sscrofa")
+
+# inspect
+head(gp_up$result)
+head(gp_down$result)
+```
+
+# Plot enrichment analysis 
+interactive = TRUE means the plot is interactive. You can select a point of interest to see what it is. \
+interactive = FALSE is needed when saving the plot
+capped = FALSE indicates if the Y-asix p-value should be capped at 16 or not. 
+```{r up-regualted}
+# up-regulated 
+gostplot(gp_up, interactive = TRUE) # , capped = FALSE
+p_up = gostplot(gp_up, interactive = FALSE)
+publish_gostplot(p_up, highlight_terms = c("GO:0002376", "GO:0006952","GO:0034097", "KEGG:05169", "KEGG04668"))
+
+path <- paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_up_gprofiler")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
+saveToPNG(paste0(path, ".png"), width = 8, height = 6, unit = "in", res = 300)
+
+# down-regulated 
+gostplot(gp_down, interactive = TRUE) # , capped = FALSE
+p_down = gostplot(gp_down, interactive = FALSE)
+publish_gostplot(p_down, highlight_terms = c("GO:0035633"))
+
+path <- paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_down_gprofiler")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 6)
+saveToPNG(paste0(path, ".png"), width = 8, height = 6, unit = "in", res = 300)
+```
+# Plot up and down enrichment together 
+```{r}
+multi_gp = gost(list("down-regulated" = down_star_brain, 
+                     "up-regulated" = up_star_brain), ordered_query = TRUE, 
+                     organism = "sscrofa")
+
+# rearrange so that up-regualted is on top 
+neworder <- c("up-regulated","down-regulated")
+multi_gp$result <- arrange(transform(multi_gp$result,
+             query=factor(query,levels=neworder)),query)
+
+# interactive plot 
+gostplot(multi_gp, interactive = TRUE)
+
+# publish plot 
+p_up_and_down = gostplot(multi_gp, interactive = FALSE)
+publish_gostplot(p_up_and_down)#, highlight_terms = c("GO:0002376", "GO:0006952", "GO:0034097", "KEGG:05169", "KEGG04668", "GO:0035633"))
+
+path <- paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_up_and_down_gprofiler")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+saveToPNG(paste0(path, ".png"), width = 8, height = 6, unit = "in", res = 300)
+```
+# Convert enrichment result names 
+gconvert enables to map between genes, proteins, microarray probes, common names, various database identifiers, etc, from numerous databases and for many species.
+```{r}
+# needed to convert to enrichResult object
+up_names = gconvert(up_star_brain, organism = "sscrofa") 
+down_names = gconvert(down_star_brain,organism = "sscrofa")
+
+# enrichment analysis using gene names
+multi_gp = gost(list("up-regulated" = up_names$name, "down-regulated" = down_names$name), multi_query = FALSE, evcodes = TRUE, ordered_query = TRUE, 
+                organism = "sscrofa")
+
+#subset(multi_gp$result, term_id == "GO:0035633")
+# reorder so that up-regulated is on top
+neworder <- c("up-regulated","down-regulated")
+multi_gp$result <- arrange(transform(multi_gp$result,
+             query=factor(query,levels=neworder)),query)
+
+# modify the g:Profiler data frame
+gp_mod = multi_gp$result[,c("query", "source", "term_id", "term_name", "p_value", 
+                            "query_size", "intersection_size","term_size", 
+                            "effective_domain_size","intersection")] 
+# get the gene name size for each GO 
+gp_mod$GeneRatio = paste0(gp_mod$intersection_size, "/", gp_mod$query_size)
+gp_mod$BgRatio = paste0(gp_mod$term_size, "/", gp_mod$effective_domain_size) 
+names(gp_mod) = c("Cluster", "Category", "ID", "Description", "p.adjust",
+"query_size", "Count", "term_size", "effective_domain_size",
+"geneID", "GeneRatio", "BgRatio") 
+gp_mod$geneID = gsub(",", "/", gp_mod$geneID)
+row.names(gp_mod) = make.names(gp_mod$ID, unique = TRUE)
+
+# define as compareClusterResult object
+gp_mod_cluster = new("compareClusterResult", compareClusterResult = gp_mod)
+# define as enrichResult object
+gp_mod_enrich = new("enrichResult", result = gp_mod)
+
+gp_mod_enrich@result$p.adjust
+# bar plot of enrichment 
+categorys <- c("anatomical structure development", "blood vessel morphogenesis", "maintenance of blood-brain barrier")
+barplot(gp_mod_enrich, showCategory = categorys, font.size = 10) + 
+  ggplot2::facet_grid(~Cluster) + 
+  ggplot2::ylab("Intersection size") + 
+  scale_fill_gradientn(colors = c("red", "brown", "grey"),
+    values = scales::rescale(c(-0.5, 0, 0.5)))
+
+path <- paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_up_bar_gprofiler")
+saveToPDF(paste0(path, ".pdf"), width = 8, height = 8)
+saveToPNG(paste0(path, ".png"), width = 8, height = 6, unit = "in", res = 300)
+
+# output table 
+write.table(gp_mod_enrich@result, paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_up_and_down_gp_mod_enrich.txt"), sep = "\t", quote = FALSE, row.names = FALSE)
+```
+
+# GO table
+```{r}
+# read in enrichment analysis results
+enrich_results <- read.delim(paste0("../../results/", tool, "/gprofiler/", treatment, "_",tolower(tissue),"_up_and_down_gp_mod_enrich.txt"), sep = "\t", header = TRUE)
+
+# select the GO term IDs we want to show in the plot 
+GO_ID_up <- c("GO:0006952", "GO:0034097", "GO:0071345", "GO:0001817", "GO:0006954", "GO:0008219", "GO:0045087")
+GO_ID_down <- c("GO:0048731", "GO:0048856", "GO:0120192", "GO:0051180", "GO:0007399", "GO:0002040", "GO:0035633")
+
+enrich_results_up <- subset(enrich_results, Cluster == "up-regulated")
+enrich_results_top_up <- enrich_results_up[enrich_results_up$ID %in% GO_ID_up, ]
+
+enrich_results_down <- subset(enrich_results, Cluster == "down-regulated")
+enrich_results_top_down <- enrich_results_down[enrich_results_down$ID %in% GO_ID_down, ]
+
+enrich_results_top_up_and_down <- rbind(enrich_results_top_up, enrich_results_top_down)
+enrich_results_top_up_and_down <- enrich_results_top_up_and_down[order(enrich_results_top_up_and_down$p.adjust),] 
+
+
+enrich_results_top_up_and_down$Description <- factor(enrich_results_top_up_and_down$Description, levels = enrich_results_top_up_and_down$Description)
+
+
+enrich_results_top_up_and_down$Description <- fct_rev(enrich_results_top_up_and_down$Description)
+p_enrich <- ggplot(data=enrich_results_top_up_and_down, aes(x=Count, y=Description)) +
+   ggplot2::facet_grid(~Cluster) +
+   geom_bar(stat="identity", aes(fill = p.adjust), width = .65) +
+  theme(axis.title.x = element_text(size = 12),
+        axis.text.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 12),
+        axis.text.y = element_text(size = 10)) +
+    theme_bw() +  # set color theme
+  #  scale_y_discrete(expand=c(0,0)) +
+  scale_fill_gradientn(colours = c("darkmagenta", "mediumorchid3", "grey"), values = rescale(c(0,.01, 0.05)), guide = "legend", limits=c(0,0.05)) + labs(x = "Gene count", y = "")
+p_enrich
+
+ggarrange(p_vol, p_enrich, ncol = 2, labels = c("a)","b)"), widths =c(1.5,2.8))
+path <- paste0("../../results/", tool, "/volcano/", treatment, "_",tolower(tissue),"_gene_volcano_FDRq0.05_and_go_enrich")
+#ggsave(paste0(path, "panel_fig.png"), panel_fig, width = 10, height = 6, units = "in")
+saveToPDF(paste0(path, ".pdf"), width = 10, height = 4)
+saveToPNG(paste0(path, ".png"), width = 8, height = 6, unit = "in", res = 300)
+
+```
+
+
+
+
