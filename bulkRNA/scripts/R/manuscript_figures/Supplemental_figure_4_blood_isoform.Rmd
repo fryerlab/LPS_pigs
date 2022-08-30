@@ -1,11 +1,11 @@
 ---
-title: "Figure_kidney"
+title: "Figure_blood"
 author: "Kimberly Olney"
 date: "06/15/2022"
 output: html_document
 ---
 
-Main figure showing kidney results
+Main figure showing blood results
 
 ```{r setup, include=FALSE}
 knitr::opts_knit$set(root.dir = ".")
@@ -46,7 +46,7 @@ library(dplyr)
 
 # User defined variables
 ```{r set_variables}
-tissue <- "Kidney"
+tissue <- "Blood"
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray65"
@@ -150,22 +150,15 @@ sleuth_table_wt$color_p0.05 <- factor(color_values)
 sleuth_table_wt$gene_name <-
   as.character(sleuth_table_wt$gene_name)
 up <- sleuth_table_wt[sleuth_table_wt$color_p0.05 == 1, ]
-up10 <- up[1:5, ]
-goi <- sleuth_table_wt[sleuth_table_wt$gene_name == "BRD4", ]
-goi2 <- sleuth_table_wt[sleuth_table_wt$gene_name == "PDE1A", ]
-goi3 <- sleuth_table_wt[sleuth_table_wt$gene_name == "TTC26", ]
-goi4 <- sleuth_table_wt[sleuth_table_wt$gene_name == "CEP350", ]
-goiVMP1 <- sleuth_table_wt[sleuth_table_wt$gene_name == "VMP1", ]
-goiANKS1A <- sleuth_table_wt[sleuth_table_wt$gene_name == "ANKS1A", ]
-goiCXCL10 <- sleuth_table_wt[sleuth_table_wt$gene_name == "CXCL10", ]
-goiCXCL11 <- sleuth_table_wt[sleuth_table_wt$gene_name == "CXCL11", ]
-goiFGG <- sleuth_table_wt[sleuth_table_wt$gene_name == "FGG", ]
-goiPLCL1 <- sleuth_table_wt[sleuth_table_wt$gene_name == "PLCL1", ]
-
+up10 <- up[1:4, ]
+goiARHGEF10L <- sleuth_table_wt[sleuth_table_wt$gene_name == "ARHGEF10L", ]
+goiCCR2 <- sleuth_table_wt[sleuth_table_wt$gene_name == "CCR2", ]
+goiEVI5 <- sleuth_table_wt[sleuth_table_wt$gene_name == "EVI5", ]
+goiICAM2 <- sleuth_table_wt[sleuth_table_wt$gene_name == "ICAM2", ]
 
 
 down <- sleuth_table_wt[sleuth_table_wt$color_p0.05 == 2, ]
-down10 <- down[1:2, ]
+down10 <- down[1:3, ]
 
 hadjpval <- (-log10(max(sleuth_table_wt$pval[sleuth_table_wt$qval < 0.05],
                         na.rm = TRUE)))
@@ -231,121 +224,78 @@ isoform_volcano <- ggplot(data = sleuth_table_wt,
         max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
       )  +
         geom_text_repel(
-        data = goi,
+        data = goiCCR2,
         aes(
           x = b,
           y = -log10(pval),
           label = gene_name
         ),
-        color = c("maroon", "navyblue", "black"),
+        color = c("navyblue","navyblue", "maroon", "maroon"),
         fontface = "italic",
         size = 2,
         min.segment.length = unit(0, 'lines'),
-        nudge_x = c(-.15, -.5, .25),
-        nudge_y = c(1, .25, -.25),
-        max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
-      )  +
-          geom_text_repel(
-        data = goi3,
-        aes(
-          x = b,
-          y = -log10(pval),
-          label = gene_name
-        ),
-        color = c("navyblue", "maroon"),
-        fontface = "italic",
-        size = 2,
-        min.segment.length = unit(0, 'lines'),
-        nudge_x = c(-.25, 1),
-        nudge_y = c(-.75, .25),
+        nudge_x = c(-.5, -.5, -.5, -.5),
+        nudge_y = c(.5, .5, -1, 1),
         max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
       )  +
         geom_text_repel(
-        data = goiVMP1,
+        data = goiEVI5,
         aes(
           x = b,
           y = -log10(pval),
           label = gene_name
         ),
-        color = c("navyblue", "maroon", "black", "black"),
+        color = c( "maroon", "maroon", "navyblue"),
         fontface = "italic",
         size = 2,
         min.segment.length = unit(0, 'lines'),
-        nudge_x = c(-.25, .5, 0, -.25),
-        nudge_y = c(.25, .25, .5, -.15),
+        nudge_x = c(0, 1, -1),
+        nudge_y = c(1, 2, -4),
         max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
       )  +
-        geom_text_repel(
-        data = goiCXCL10,
-        aes(
-          x = b,
-          y = -log10(pval),
-          label = gene_name
-        ),
-        color = c( "maroon"),
-        fontface = "italic",
-        size = 2,
-        min.segment.length = unit(0, 'lines'),
-        nudge_x = c(.25),
-        max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
-      )  +
-          geom_text_repel(
-        data = goiCXCL11,
-        aes(
-          x = b,
-          y = -log10(pval),
-          label = gene_name
-        ),
-        color = c( "maroon"),
-        fontface = "italic",
-        size = 2,
-        min.segment.length = unit(0, 'lines'),
-        nudge_x = c(.25),
-        max.overlaps = getOption("ggrepel.max.overlaps", default = 15)
-      )  +
-      scale_y_continuous(breaks = seq(0, 75, by = 15), limits = c(0, 75)) +
-     scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-8, 8)
+      scale_y_continuous(breaks = seq(0, 175, by = 25), limits = c(0, 165)) +
+     scale_x_continuous(breaks = seq(-8, 10, by = 2), limits = c(-8, 10)
       )
 isoform_volcano
 
 ```
 ### Upset
 ```{r}
-star_kidney <-
+star_blood <-
   read.delim(
-    "../../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt",
+    "../../../results/star/DEGs/LPS_Blood_gene_DEGs_FDRq0.05.txt",
     header = TRUE,
     sep = "\t"
   )
-kallisto_kidney <-
+kallisto_blood <-
   read.delim(
-    "../../../results/kallisto/DEGs/LPS_Kidney_isoform_DEGs_FDRq0.05.txt",
+    "../../../results/kallisto/DEGs/LPS_Blood_isoform_DEGs_FDRq0.05.txt",
     header = TRUE,
     sep = "\t"
   )
 
-up_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC > 0)
-down_star_kidney <-
-  subset(star_kidney$gene_name, star_kidney$logFC < 0)
+up_star_blood <- subset(star_blood$gene_name, star_blood$logFC > 0)
+down_star_blood <-
+  subset(star_blood$gene_name, star_blood$logFC < 0)
 
-up_kallisto_kidney <-
-  subset(kallisto_kidney$gene_name, kallisto_kidney$b > 0)
-down_kallisto_kidney <-
-  subset(kallisto_kidney$gene_name, kallisto_kidney$b < 0)
+up_kallisto_blood <-
+  subset(kallisto_blood$gene_name, kallisto_blood$b > 0)
+down_kallisto_blood <-
+  subset(kallisto_blood$gene_name, kallisto_blood$b < 0)
 
-up_genes <- intersect(up_star_kidney, up_kallisto_kidney)
-down_genes <- intersect(down_star_kidney, down_kallisto_kidney)
-# kidney
-kidney_input <- list(
-  "gene down-regulated" = down_star_kidney,
-  "gene up-regulated" = up_star_kidney,
-  "isoform down-regulated" = down_kallisto_kidney,
-  "isoform up-regulated" = up_kallisto_kidney
+up_genes <- intersect(up_star_blood, up_kallisto_blood)
+down_genes <- intersect(down_star_blood, down_kallisto_blood)
+# blood
+blood_input <- list(
+  "gene down-regulated" = down_star_blood,
+  "gene up-regulated" = up_star_blood,
+  "isoform down-regulated" = down_kallisto_blood,
+  "isoform up-regulated" = up_kallisto_blood
 )
-kidney_data <- fromList(kidney_input)
+blood_data <- fromList(blood_input)
 
-kidney_upset <- upset(
-  kidney_data,
+blood_upset <- upset(
+  blood_data,
   c(
     'isoform down-regulated',
     'gene down-regulated',
@@ -380,7 +330,7 @@ kidney_upset <- upset(
     'gene up-regulated',
     'isoform up-regulated',
     c('isoform up-regulated', 'isoform down-regulated'),
-  #  c('gene down-regulated', 'isoform up-regulated'),
+    c('gene down-regulated', 'isoform up-regulated'),
     c('gene up-regulated', 'isoform down-regulated')
   ),
   base_annotations=list(
@@ -416,7 +366,7 @@ kidney_upset <- upset(
   sort_sets=FALSE,
   sort_intersections=FALSE) 
 
-kidney_upset 
+blood_upset 
 ```
 ### GTF 
 ```{r}
@@ -473,9 +423,9 @@ data_summary <- function(data, varname, groupnames) {
 }
 ```
 ### Bar plots of TMP and log2FC & transcript plot
-#### ANKS1A
+#### AGO3
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "ANKS1A")
+goi_iso_box <- subset(all_iso_genes, gene_name == "AGO3")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -495,7 +445,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-ANKS1A_logFC <-
+AGO3_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -508,7 +458,7 @@ ANKS1A_logFC <-
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
-  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
+  scale_x_continuous(breaks = seq(-3, 3, by = 1), limits = c(-3, 3)) +
   geom_vline(xintercept = 0,
              color = "black",
              size = .5) +
@@ -517,11 +467,11 @@ ANKS1A_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("ANKS1A fold change")
-ANKS1A_logFC
+  ggtitle("AGO3 fold change")
+AGO3_logFC
 
 # bar plot
-ANKS1A_tmp_bar <-
+AGO3_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -532,7 +482,7 @@ ANKS1A_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -543,14 +493,14 @@ ANKS1A_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("ANKS1A expression")
-ANKS1A_tmp_bar
+  ggtitle("AGO3 expression")
+AGO3_tmp_bar
 
 # extract exons
-ANKS1A_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ANKS1A")
-ANKS1A_exons <- subset(ANKS1A_exons, transcript_id %in% goi_iso_box$transcript_id)
+AGO3_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "AGO3")
+AGO3_exons <- subset(AGO3_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-ANKS1A_transcript <- ANKS1A_exons %>%
+AGO3_transcript <- AGO3_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -561,7 +511,7 @@ ANKS1A_transcript <- ANKS1A_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(ANKS1A_exons, "transcript_name"),
+    data = to_intron(AGO3_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -578,13 +528,13 @@ ANKS1A_transcript <- ANKS1A_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
    scale_fill_manual(values = c("black")) +
-  ggtitle("ANKS1A transcripts") +
-  xlab("chromosome 7")
-ANKS1A_transcript
+  ggtitle("AGO3 transcripts") +
+  xlab("chromosome 6")
+AGO3_transcript
 ```
-#### BRD4
+#### AMN1
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "BRD4")
+goi_iso_box <- subset(all_iso_genes, gene_name == "AMN1")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -603,7 +553,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-BRD4_logFC <-
+AMN1_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -626,11 +576,11 @@ BRD4_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("BRD4 fold change")
-BRD4_logFC
+  ggtitle("AMN1 fold change")
+AMN1_logFC
 
 # bar plot
-BRD4_tmp_bar <-
+AMN1_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -641,7 +591,7 @@ BRD4_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -652,14 +602,14 @@ BRD4_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("BRD4 expression")
-BRD4_tmp_bar
+  ggtitle("AMN1 expression")
+AMN1_tmp_bar
 
 # extract exons
-BRD4_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "BRD4")
-BRD4_exons <- subset(BRD4_exons, transcript_id %in% goi_iso_box$transcript_id)
+AMN1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "AMN1")
+AMN1_exons <- subset(AMN1_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-BRD4_transcript <- BRD4_exons %>%
+AMN1_transcript <- AMN1_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -670,7 +620,7 @@ BRD4_transcript <- BRD4_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(BRD4_exons, "transcript_name"),
+    data = to_intron(AMN1_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -687,13 +637,13 @@ BRD4_transcript <- BRD4_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("BRD4 transcripts") +
-  xlab("chromosome 2")
-BRD4_transcript
+  ggtitle("AMN1 transcripts") +
+  xlab("chromosome 5")
+AMN1_transcript
 ```
-#### OCRL
+#### ANKRD28
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "OCRL")
+goi_iso_box <- subset(all_iso_genes, gene_name == "ANKRD28")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -712,115 +662,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-OCRL_logFC <-
-  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
-  geom_bar(
-    stat = "identity",
-    color = "black",
-    width = .7,
-    position = position_dodge()
-  ) +
-  theme_classic() +
-  scale_fill_manual(values = c("red", "blue", "grey", "grey")) +
-  labs(x = expression(log[2](FC))) +
-  theme_bw() + theme(legend.position = "none") +
-  theme(axis.title.y = element_blank())  +
-  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
-  geom_vline(xintercept = 0,
-             color = "black",
-             size = .5) +
-  theme(axis.text.y = element_blank(), 
-        axis.text.x = element_text(size = 6),
-        axis.title.x = element_text(size = 6), 
-        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-        plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("OCRL fold change")
-OCRL_logFC
-
-# bar plot
-OCRL_tmp_bar <-
-  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
-  geom_bar(
-    stat = "identity",
-    color = "black",
-    width = .7,
-    position = position_dodge()
-  ) +
-  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
-                width = .2,
-                position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
-  theme_classic() +
-  scale_fill_manual(values = c(treatment_color, control_color)) +
-  theme_bw() + 
-  theme(legend.position = "none") +
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.text.x = element_text(size = 6),
-        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-        axis.title.x = element_text(size = 6), 
-        plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("OCRL expression")
-OCRL_tmp_bar
-
-# extract exons
-OCRL_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "OCRL")
-OCRL_exons <- subset(OCRL_exons, transcript_id %in% goi_iso_box$transcript_id)
-
-OCRL_transcript <- OCRL_exons %>%
-  ggplot(aes(
-    xstart = start,
-    xend = end,
-    y = transcript_id
-  )) +
-  geom_range(
-    aes(fill = transcript_biotype)
-  ) +
-  geom_intron(
-    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(OCRL_exons, "transcript_name"),
-    aes(strand = strand)
-  ) + theme_classic() +
-  theme_bw() +
-  theme(
-    strip.text = element_text(size = 6),
-    legend.position = "none",
-    panel.background = element_blank(),
-    panel.spacing = unit(0,'lines'), 
-    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-    axis.title.x=element_text(size = 6),
-    axis.text.x = element_text(size = 6), 
-    axis.title.y = element_blank(), 
-    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
-    plot.margin = margin(.15,0,.1,.15, "cm"),
-    axis.ticks.y=element_blank()) +
-    scale_fill_manual(values = c("black")) +
-  ggtitle("OCRL transcripts") +
-  xlab("chromosome X")
-OCRL_transcript
-```
-#### PDCD6
-```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "PDCD6")
-
-# get the bootstrap values for each sample for each isoform of the gene of interest
-tpm_target_id_df <- NULL
-for (i in goi_iso_box$target_id) {
-  tmp_per_target <-
-    get_bootstrap_summary(so, target_id = i, units = "est_counts")
-  tmp_per_target$target_id <- i
-  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
-}
-df_TPM_goi <- data_summary(
-  tpm_target_id_df,
-  varname = "mid",
-  groupnames = c("condition", "target_id")
-)
-# Convert to a factor variable
-df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
-df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
-
-PDCD6_logFC <-
+ANKRD28_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -830,6 +672,7 @@ PDCD6_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -842,11 +685,11 @@ PDCD6_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("PDCD6 fold change")
-PDCD6_logFC
+  ggtitle("ANKRD28 fold change")
+ANKRD28_logFC
 
 # bar plot
-PDCD6_tmp_bar <-
+ANKRD28_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -857,7 +700,7 @@ PDCD6_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -868,14 +711,14 @@ PDCD6_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("PDCD6 expression")
-PDCD6_tmp_bar
+  ggtitle("ANKRD28 expression")
+ANKRD28_tmp_bar
 
 # extract exons
-PDCD6_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "PDCD6")
-PDCD6_exons <- subset(PDCD6_exons, transcript_id %in% goi_iso_box$transcript_id)
+ANKRD28_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ANKRD28")
+ANKRD28_exons <- subset(ANKRD28_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-PDCD6_transcript <- PDCD6_exons %>%
+ANKRD28_transcript <- ANKRD28_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -886,7 +729,7 @@ PDCD6_transcript <- PDCD6_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(PDCD6_exons, "transcript_name"),
+    data = to_intron(ANKRD28_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -903,13 +746,13 @@ PDCD6_transcript <- PDCD6_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("PDCD6 transcripts") +
-  xlab("chromosome 16")
-PDCD6_transcript
+  ggtitle("ANKRD28 transcripts") +
+  xlab("chromosome 5")
+ANKRD28_transcript
 ```
-#### VMP1
+#### ANXA6
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "VMP1")
+goi_iso_box <- subset(all_iso_genes, gene_name == "ANXA6")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -928,7 +771,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-VMP1_logFC <-
+ANXA6_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -938,6 +781,7 @@ VMP1_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -950,11 +794,11 @@ VMP1_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("VMP1 fold change")
-VMP1_logFC
+  ggtitle("ANXA6 fold change")
+ANXA6_logFC
 
 # bar plot
-VMP1_tmp_bar <-
+ANXA6_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -965,7 +809,7 @@ VMP1_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -976,14 +820,14 @@ VMP1_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("VMP1 expression")
-VMP1_tmp_bar
+  ggtitle("ANXA6 expression")
+ANXA6_tmp_bar
 
 # extract exons
-VMP1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "VMP1")
-VMP1_exons <- subset(VMP1_exons, transcript_id %in% goi_iso_box$transcript_id)
+ANXA6_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ANXA6")
+ANXA6_exons <- subset(ANXA6_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-VMP1_transcript <- VMP1_exons %>%
+ANXA6_transcript <- ANXA6_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -994,7 +838,7 @@ VMP1_transcript <- VMP1_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(VMP1_exons, "transcript_name"),
+    data = to_intron(ANXA6_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1011,13 +855,667 @@ VMP1_transcript <- VMP1_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("VMP1 transcripts") +
+  ggtitle("ANXA6 transcripts") +
+  xlab("chromosome 5")
+ANXA6_transcript
+```
+#### ARHGEF10L
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "ARHGEF10L")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+ARHGEF10L_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-4, 6, by = 2), limits = c(-4, 6)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("ARHGEF10L fold change")
+ARHGEF10L_logFC
+
+# bar plot
+ARHGEF10L_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("ARHGEF10L expression")
+ARHGEF10L_tmp_bar
+
+# extract exons
+ARHGEF10L_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ARHGEF10L")
+ARHGEF10L_exons <- subset(ARHGEF10L_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+ARHGEF10L_transcript <- ARHGEF10L_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(ARHGEF10L_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("ARHGEF10L transcripts") +
+  xlab("chromosome 6")
+ARHGEF10L_transcript
+```
+#### B4GALT6
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "B4GALT6")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+B4GALT6_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("B4GALT6 fold change")
+B4GALT6_logFC
+
+# bar plot
+B4GALT6_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("B4GALT6 expression")
+B4GALT6_tmp_bar
+
+# extract exons
+B4GALT6_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "B4GALT6")
+B4GALT6_exons <- subset(B4GALT6_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+B4GALT6_transcript <- B4GALT6_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(B4GALT6_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("B4GALT6 transcripts") +
+  xlab("chromosome 5")
+B4GALT6_transcript
+```
+#### CCR2
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "CCR2")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+CCR2_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-4, 6, by = 2), limits = c(-4, 6)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("CCR2 fold change")
+CCR2_logFC
+
+# bar plot
+CCR2_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("CCR2 expression")
+CCR2_tmp_bar
+
+# extract exons
+CCR2_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "CCR2")
+CCR2_exons <- subset(CCR2_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+CCR2_transcript <- CCR2_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(CCR2_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("CCR2 transcripts") +
+  xlab("chromosome 13")
+CCR2_transcript
+```
+#### CYFIP1
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "CYFIP1")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+CYFIP1_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("CYFIP1 fold change")
+CYFIP1_logFC
+
+# bar plot
+CYFIP1_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("CYFIP1 expression")
+CYFIP1_tmp_bar
+
+# extract exons
+CYFIP1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "CYFIP1")
+CYFIP1_exons <- subset(CYFIP1_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+CYFIP1_transcript <- CYFIP1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(CYFIP1_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("CYFIP1 transcripts") +
+  xlab("chromosome 5")
+CYFIP1_transcript
+```
+#### EVI5
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "EVI5")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+EVI5_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-4, 6, by = 2), limits = c(-4, 6)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("EVI5 fold change")
+EVI5_logFC
+
+# bar plot
+EVI5_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("EVI5 expression")
+EVI5_tmp_bar
+
+# extract exons
+EVI5_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "EVI5")
+EVI5_exons <- subset(EVI5_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+EVI5_transcript <- EVI5_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(EVI5_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("EVI5 transcripts") +
+  xlab("chromosome 4")
+EVI5_transcript
+```
+#### ICAM2
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "ICAM2")
+
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+ICAM2_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-4, 6, by = 2), limits = c(-4, 6)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("ICAM2 fold change")
+ICAM2_logFC
+
+# bar plot
+ICAM2_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("ICAM2 expression")
+ICAM2_tmp_bar
+
+# extract exons
+ICAM2_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ICAM2")
+ICAM2_exons <- subset(ICAM2_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+ICAM2_transcript <- ICAM2_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(ICAM2_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("ICAM2 transcripts") +
   xlab("chromosome 12")
-VMP1_transcript
+ICAM2_transcript
 ```
-#### WWP2
+#### NUP155
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "WWP2")
+goi_iso_box <- subset(all_iso_genes, gene_name == "NUP155")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -1036,7 +1534,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-WWP2_logFC <-
+NUP155_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -1046,6 +1544,7 @@ WWP2_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -1058,11 +1557,11 @@ WWP2_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("WWP2 fold change")
-WWP2_logFC
+  ggtitle("NUP155 fold change")
+NUP155_logFC
 
 # bar plot
-WWP2_tmp_bar <-
+NUP155_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -1073,7 +1572,7 @@ WWP2_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -1084,14 +1583,14 @@ WWP2_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("WWP2 expression")
-WWP2_tmp_bar
+  ggtitle("NUP155 expression")
+NUP155_tmp_bar
 
 # extract exons
-WWP2_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "WWP2")
-WWP2_exons <- subset(WWP2_exons, transcript_id %in% goi_iso_box$transcript_id)
+NUP155_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "NUP155")
+NUP155_exons <- subset(NUP155_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-WWP2_transcript <- WWP2_exons %>%
+NUP155_transcript <- NUP155_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -1102,7 +1601,7 @@ WWP2_transcript <- WWP2_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(WWP2_exons, "transcript_name"),
+    data = to_intron(NUP155_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1119,13 +1618,13 @@ WWP2_transcript <- WWP2_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("WWP2 transcripts") +
-  xlab("chromosome 6")
-WWP2_transcript
+  ggtitle("NUP155 transcripts") +
+  xlab("chromosome 5")
+NUP155_transcript
 ```
-#### CEP350
+#### SF1
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "CEP350")
+goi_iso_box <- subset(all_iso_genes, gene_name == "SF1")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -1144,116 +1643,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-CEP350_logFC <-
-  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
-  geom_bar(
-    stat = "identity",
-    color = "black",
-    width = .7,
-    position = position_dodge()
-  ) +
-  theme_classic() +
-  scale_fill_manual(values = c("blue", "grey")) +
-  labs(x = expression(log[2](FC))) +
-  theme_bw() + theme(legend.position = "none") +
-  theme(axis.title.y = element_blank())  +
-  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
-  geom_vline(xintercept = 0,
-             color = "black",
-             size = .5) +
-  theme(axis.text.y = element_blank(), 
-        axis.text.x = element_text(size = 6),
-        axis.title.x = element_text(size = 6), 
-        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-        plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("CEP350 fold change")
-CEP350_logFC
-
-# bar plot
-CEP350_tmp_bar <-
-  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
-  geom_bar(
-    stat = "identity",
-    color = "black",
-    width = .7,
-    position = position_dodge()
-  ) +
-  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
-                width = .2,
-                position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
-  theme_classic() +
-  scale_fill_manual(values = c(treatment_color, control_color)) +
-  theme_bw() + 
-  theme(legend.position = "none") +
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.text.x = element_text(size = 6),
-        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-        axis.title.x = element_text(size = 6), 
-        plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("CEP350 expression")
-CEP350_tmp_bar
-
-# extract exons
-CEP350_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "CEP350")
-CEP350_exons <- subset(CEP350_exons, transcript_id %in% goi_iso_box$transcript_id)
-
-CEP350_transcript <- CEP350_exons %>%
-  ggplot(aes(
-    xstart = start,
-    xend = end,
-    y = transcript_id
-  )) +
-  geom_range(
-    aes(fill = transcript_biotype)
-  ) +
-  geom_intron(
-    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(CEP350_exons, "transcript_name"),
-    aes(strand = strand)
-  ) + theme_classic() +
-  theme_bw() +
-  theme(
-    strip.text = element_text(size = 6),
-    legend.position = "none",
-    panel.background = element_blank(),
-    panel.spacing = unit(0,'lines'), 
-    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
-    axis.title.x=element_text(size = 6),
-    axis.text.x = element_text(size = 6), 
-    axis.title.y = element_blank(), 
-    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
-    plot.margin = margin(.15,0,.1,.15, "cm"),
-    axis.ticks.y=element_blank()) +
-    scale_fill_manual(values = c("black")) +
-  ggtitle("CEP350 transcripts") +
-  xlab("chromosome 9")
-CEP350_transcript
-```
-
-#### ARHGEF1
-```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "ARHGEF1")
-
-# get the bootstrap values for each sample for each isoform of the gene of interest
-tpm_target_id_df <- NULL
-for (i in goi_iso_box$target_id) {
-  tmp_per_target <-
-    get_bootstrap_summary(so, target_id = i, units = "est_counts")
-  tmp_per_target$target_id <- i
-  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
-}
-df_TPM_goi <- data_summary(
-  tpm_target_id_df,
-  varname = "mid",
-  groupnames = c("condition", "target_id")
-)
-# Convert to a factor variable
-df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
-df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
-
-ARHGEF1_logFC <-
+SF1_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -1263,6 +1653,7 @@ ARHGEF1_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -1275,11 +1666,11 @@ ARHGEF1_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("ARHGEF1 fold change")
-ARHGEF1_logFC
+  ggtitle("SF1 fold change")
+SF1_logFC
 
 # bar plot
-ARHGEF1_tmp_bar <-
+SF1_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -1290,7 +1681,7 @@ ARHGEF1_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -1301,14 +1692,14 @@ ARHGEF1_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("ARHGEF1 expression")
-ARHGEF1_tmp_bar
+  ggtitle("SF1 expression")
+SF1_tmp_bar
 
 # extract exons
-ARHGEF1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "ARHGEF1")
-ARHGEF1_exons <- subset(ARHGEF1_exons, transcript_id %in% goi_iso_box$transcript_id)
+SF1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "SF1")
+SF1_exons <- subset(SF1_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-ARHGEF1_transcript <- ARHGEF1_exons %>%
+SF1_transcript <- SF1_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -1319,7 +1710,7 @@ ARHGEF1_transcript <- ARHGEF1_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(ARHGEF1_exons, "transcript_name"),
+    data = to_intron(SF1_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1336,13 +1727,13 @@ ARHGEF1_transcript <- ARHGEF1_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("ARHGEF1 transcripts") +
-  xlab("chromosome 6")
-ARHGEF1_transcript
+  ggtitle("SF1 transcripts") +
+  xlab("chromosome 5")
+SF1_transcript
 ```
-#### PDE1A
+#### SLC14A1
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "PDE1A")
+goi_iso_box <- subset(all_iso_genes, gene_name == "SLC14A1")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -1361,7 +1752,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-PDE1A_logFC <-
+SLC14A1_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -1371,6 +1762,7 @@ PDE1A_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -1383,11 +1775,11 @@ PDE1A_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("PDE1A fold change")
-PDE1A_logFC
+  ggtitle("SLC14A1 fold change")
+SLC14A1_logFC
 
 # bar plot
-PDE1A_tmp_bar <-
+SLC14A1_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -1398,7 +1790,7 @@ PDE1A_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -1409,14 +1801,14 @@ PDE1A_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("PDE1A expression")
-PDE1A_tmp_bar
+  ggtitle("SLC14A1 expression")
+SLC14A1_tmp_bar
 
 # extract exons
-PDE1A_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "PDE1A")
-PDE1A_exons <- subset(PDE1A_exons, transcript_id %in% goi_iso_box$transcript_id)
+SLC14A1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "SLC14A1")
+SLC14A1_exons <- subset(SLC14A1_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-PDE1A_transcript <- PDE1A_exons %>%
+SLC14A1_transcript <- SLC14A1_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -1427,7 +1819,7 @@ PDE1A_transcript <- PDE1A_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(PDE1A_exons, "transcript_name"),
+    data = to_intron(SLC14A1_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1444,13 +1836,13 @@ PDE1A_transcript <- PDE1A_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("PDE1A transcripts") +
-  xlab("chromosome 15")
-PDE1A_transcript
+  ggtitle("SLC14A1 transcripts") +
+  xlab("chromosome 5")
+SLC14A1_transcript
 ```
-#### TLN2
+#### SLC25A6
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "TLN2")
+goi_iso_box <- subset(all_iso_genes, gene_name == "SLC25A6")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -1469,7 +1861,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-TLN2_logFC <-
+SLC25A6_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -1479,6 +1871,7 @@ TLN2_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -1491,11 +1884,11 @@ TLN2_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("TLN2 fold change")
-TLN2_logFC
+  ggtitle("SLC25A6 fold change")
+SLC25A6_logFC
 
 # bar plot
-TLN2_tmp_bar <-
+SLC25A6_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -1506,7 +1899,7 @@ TLN2_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -1517,14 +1910,14 @@ TLN2_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("TLN2 expression")
-TLN2_tmp_bar
+  ggtitle("SLC25A6 expression")
+SLC25A6_tmp_bar
 
 # extract exons
-TLN2_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "TLN2")
-TLN2_exons <- subset(TLN2_exons, transcript_id %in% goi_iso_box$transcript_id)
+SLC25A6_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "SLC25A6")
+SLC25A6_exons <- subset(SLC25A6_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-TLN2_transcript <- TLN2_exons %>%
+SLC25A6_transcript <- SLC25A6_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -1535,7 +1928,7 @@ TLN2_transcript <- TLN2_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(TLN2_exons, "transcript_name"),
+    data = to_intron(SLC25A6_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1552,13 +1945,13 @@ TLN2_transcript <- TLN2_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("TLN2 transcripts") +
-  xlab("chromosome 6")
-TLN2_transcript
+  ggtitle("SLC25A6 transcripts") +
+  xlab("chromosome 5")
+SLC25A6_transcript
 ```
-#### TTC26
+#### SLTM
 ```{r}
-goi_iso_box <- subset(all_iso_genes, gene_name == "TTC26")
+goi_iso_box <- subset(all_iso_genes, gene_name == "SLTM")
 
 # get the bootstrap values for each sample for each isoform of the gene of interest
 tpm_target_id_df <- NULL
@@ -1577,7 +1970,7 @@ df_TPM_goi <- data_summary(
 df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
 df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
 
-TTC26_logFC <-
+SLTM_logFC <-
   ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
   geom_bar(
     stat = "identity",
@@ -1587,6 +1980,7 @@ TTC26_logFC <-
   ) +
   theme_classic() +
   scale_fill_manual(values = c("red", "blue", "grey")) +
+
   labs(x = expression(log[2](FC))) +
   theme_bw() + theme(legend.position = "none") +
   theme(axis.title.y = element_blank())  +
@@ -1599,11 +1993,11 @@ TTC26_logFC <-
         axis.title.x = element_text(size = 6), 
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         plot.margin = margin(.1,.2,.1,0, "cm")) +
-  ggtitle("TTC26 fold change")
-TTC26_logFC
+  ggtitle("SLTM fold change")
+SLTM_logFC
 
 # bar plot
-TTC26_tmp_bar <-
+SLTM_tmp_bar <-
   ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
   geom_bar(
     stat = "identity",
@@ -1614,7 +2008,7 @@ TTC26_tmp_bar <-
   geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
                 width = .2,
                 position = position_dodge(width = .7)) +
-  labs(x = "bootsrap estimated counts", y = "") +
+  labs(x = "bootstrap estimated counts", y = "") +
   theme_classic() +
   scale_fill_manual(values = c(treatment_color, control_color)) +
   theme_bw() + 
@@ -1625,14 +2019,14 @@ TTC26_tmp_bar <-
         plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
         axis.title.x = element_text(size = 6), 
         plot.margin = margin(.1,0,.1,0, "cm")) +
-  ggtitle("TTC26 expression")
-TTC26_tmp_bar
+  ggtitle("SLTM expression")
+SLTM_tmp_bar
 
 # extract exons
-TTC26_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "TTC26")
-TTC26_exons <- subset(TTC26_exons, transcript_id %in% goi_iso_box$transcript_id)
+SLTM_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "SLTM")
+SLTM_exons <- subset(SLTM_exons, transcript_id %in% goi_iso_box$transcript_id)
 
-TTC26_transcript <- TTC26_exons %>%
+SLTM_transcript <- SLTM_exons %>%
   ggplot(aes(
     xstart = start,
     xend = end,
@@ -1643,7 +2037,7 @@ TTC26_transcript <- TTC26_exons %>%
   ) +
   geom_intron(
     arrow = arrow(angle = 10, length = unit(0.0, "inches")),
-    data = to_intron(TTC26_exons, "transcript_name"),
+    data = to_intron(SLTM_exons, "transcript_name"),
     aes(strand = strand)
   ) + theme_classic() +
   theme_bw() +
@@ -1660,11 +2054,119 @@ TTC26_transcript <- TTC26_exons %>%
     plot.margin = margin(.15,0,.1,.15, "cm"),
     axis.ticks.y=element_blank()) +
     scale_fill_manual(values = c("black")) +
-  ggtitle("TTC26 transcripts") +
-  xlab("chromosome 6")
-TTC26_transcript
+  ggtitle("SLTM transcripts") +
+  xlab("chromosome 5")
+SLTM_transcript
 ```
+#### YLPM1
+```{r}
+goi_iso_box <- subset(all_iso_genes, gene_name == "YLPM1")
 
+# get the bootstrap values for each sample for each isoform of the gene of interest
+tpm_target_id_df <- NULL
+for (i in goi_iso_box$target_id) {
+  tmp_per_target <-
+    get_bootstrap_summary(so, target_id = i, units = "est_counts")
+  tmp_per_target$target_id <- i
+  tpm_target_id_df <- rbind(tpm_target_id_df, tmp_per_target)
+}
+df_TPM_goi <- data_summary(
+  tpm_target_id_df,
+  varname = "mid",
+  groupnames = c("condition", "target_id")
+)
+# Convert to a factor variable
+df_TPM_goi$target_id = as.factor(df_TPM_goi$target_id)
+df_TPM_goi$condition <- factor(df_TPM_goi$condition, levels = c("LPS", "Control"))
+
+YLPM1_logFC <-
+  ggplot(goi_iso_box, aes(x = b, y = transcript_id, fill = color_p0.05)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  theme_classic() +
+  scale_fill_manual(values = c("red", "blue", "grey")) +
+
+  labs(x = expression(log[2](FC))) +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())  +
+  scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-7, 7)) +
+  geom_vline(xintercept = 0,
+             color = "black",
+             size = .5) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(size = 6), 
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        plot.margin = margin(.1,.2,.1,0, "cm")) +
+  ggtitle("YLPM1 fold change")
+YLPM1_logFC
+
+# bar plot
+YLPM1_tmp_bar <-
+  ggplot(df_TPM_goi, aes(x = mean, y = target_id, fill = condition)) +
+  geom_bar(
+    stat = "identity",
+    color = "black",
+    width = .7,
+    position = position_dodge()
+  ) +
+  geom_errorbar(aes(xmin = mean - sd, xmax = mean + sd),
+                width = .2,
+                position = position_dodge(width = .7)) +
+  labs(x = "bootstrap estimated counts", y = "") +
+  theme_classic() +
+  scale_fill_manual(values = c(treatment_color, control_color)) +
+  theme_bw() + 
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+        axis.title.x = element_text(size = 6), 
+        plot.margin = margin(.1,0,.1,0, "cm")) +
+  ggtitle("YLPM1 expression")
+YLPM1_tmp_bar
+
+# extract exons
+YLPM1_exons <- gtf.df %>% dplyr::filter(type == "exon" & gene_name == "YLPM1")
+YLPM1_exons <- subset(YLPM1_exons, transcript_id %in% goi_iso_box$transcript_id)
+
+YLPM1_transcript <- YLPM1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_id
+  )) +
+  geom_range(
+    aes(fill = transcript_biotype)
+  ) +
+  geom_intron(
+    arrow = arrow(angle = 10, length = unit(0.0, "inches")),
+    data = to_intron(YLPM1_exons, "transcript_name"),
+    aes(strand = strand)
+  ) + theme_classic() +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, margin = margin(0,0,0,0)),
+    axis.title.x=element_text(size = 6),
+    axis.text.x = element_text(size = 6), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -1)),
+    plot.margin = margin(.15,0,.1,.15, "cm"),
+    axis.ticks.y=element_blank()) +
+    scale_fill_manual(values = c("black")) +
+  ggtitle("YLPM1 transcripts") +
+  xlab("chromosome 5")
+YLPM1_transcript
+```
 ### Get legend information
 ```{r}
 # bar plot
@@ -1711,7 +2213,7 @@ FC_legend
 ```{r}
 rowVol <- ggarrange(
   isoform_volcano,
-  kidney_upset,
+  blood_upset,
   ncol = 2,
   labels = c("a)", "b)"),
   widths = c(1, 1.5), 
@@ -1726,62 +2228,42 @@ rowTransLeg <- ggarrange(
   widths = c(2.25, 1, 1)
 )
 
-rowANKS1A <- ggarrange(
-  ANKS1A_transcript, 
-  ANKS1A_tmp_bar, 
-  ANKS1A_logFC, 
+rowARHGEF10L <- ggarrange(
+  ARHGEF10L_transcript, 
+  ARHGEF10L_tmp_bar, 
+  ARHGEF10L_logFC, 
   ncol = 3,
   labels = c("c)", "", ""),
   widths = c(2.25, 1, 1),
   font.label = list(size = 8)
   )
 
-rowBRD4 <- ggarrange(
-  BRD4_transcript, 
-  BRD4_tmp_bar, 
-  BRD4_logFC, 
+rowCCR2 <- ggarrange(
+  CCR2_transcript, 
+  CCR2_tmp_bar, 
+  CCR2_logFC, 
   ncol = 3,
   labels = c("d)", "", ""),
   widths = c(2.25, 1, 1),
   font.label = list(size = 8)
   )
 
-rowPDE1A <- ggarrange(
-  PDE1A_transcript, 
-  PDE1A_tmp_bar, 
-  PDE1A_logFC, 
+rowEVI5 <- ggarrange(
+  EVI5_transcript, 
+  EVI5_tmp_bar, 
+  EVI5_logFC, 
   ncol = 3,
   labels = c("e)", "", ""),
   widths = c(2.25, 1, 1),
   font.label = list(size = 8)
   )
 
-rowTTC26 <- ggarrange(
-  TTC26_transcript, 
-  TTC26_tmp_bar, 
-  TTC26_logFC, 
-  ncol = 3,
-  labels = c("e)", "", ""),
-  widths = c(2.25, 1, 1),
-  font.label = list(size = 8)
-  )
-
-rowVMP1 <- ggarrange(
-  VMP1_transcript, 
-  VMP1_tmp_bar, 
-  VMP1_logFC, 
+rowICAM2 <- ggarrange(
+  ICAM2_transcript, 
+  ICAM2_tmp_bar, 
+  ICAM2_logFC, 
   ncol = 3,
   labels = c("f)", "", ""),
-  widths = c(2.25, 1, 1),
-  font.label = list(size = 8)
-  )
-
-rowCEP350 <- ggarrange(
-  CEP350_transcript, 
-  CEP350_tmp_bar, 
-  CEP350_logFC, 
-  ncol = 3,
-  labels = c("g)", "", ""),
   widths = c(2.25, 1, 1),
   font.label = list(size = 8)
   )
@@ -1790,14 +2272,12 @@ combind <-
   ggarrange(
     rowVol,
     rowTransLeg,
-    rowANKS1A,
-    rowBRD4,
-#    rowPDE1A,
-    rowTTC26,
-    rowVMP1,
-    rowCEP350,
-    nrow = 7,
-    heights = c(1.25, .06, .6, .4, .325, .5, .4)
+    rowARHGEF10L,
+    rowCCR2,
+    rowEVI5,
+    rowICAM2,
+    nrow = 6,
+    heights = c(1.25, .06, .45, .5, .45, .5)
   )
 combind
 
