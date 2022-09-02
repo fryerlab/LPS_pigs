@@ -397,7 +397,7 @@ up_and_down_enrich_plot <-
   scale_fill_gradientn(
     colours = c("darkmagenta", "mediumorchid3", "grey"),
     guide = "legend",
-    limits = c(-45,-1)
+    limits = c(-45,0)
   ) +
     theme(strip.text = element_text(size = 6), 
           axis.text.y = element_text(size = 7),
@@ -565,6 +565,26 @@ down_FC <- rbind(brain_FC_down, kidney_FC_down)
 
 ### Genes in enrichment plot all
 ## up 
+[1] Cytokine Signaling in Immune system                            
+ [2] response to virus                                              
+ [3] TNF signaling pathway                                          
+ [4] response to lipopolysaccharide                                 
+ [5] regulation of defense response                                 
+ [6] positive regulation of cytokine production                     
+ [7] Interferon Signaling                                           
+ [8] positive regulation of cell death                              
+ [9] Epstein-Barr virus infection                                   
+[10] regulation of response to biotic stimulus                      
+[11] TNF-related weak inducer of apoptosis (TWEAK) signaling pathway
+[12] PID P53 DOWNSTREAM PATHWAY                                     
+[13] Orexin receptor pathway                                        
+[14] immune system development                                      
+[15] Lipid and atherosclerosis                                      
+[16] VEGFA-VEGFR2 signaling pathway                                 
+[17] Human T-cell leukemia virus 1 infection                        
+[18] response to tumor necrosis factor                              
+[19] cellular response to external stimulus                         
+[20] regulation of response to cytokine stimulus 
 ```{r}
 up_enrich_df <-
   up_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
@@ -578,10 +598,8 @@ up_pathways_levels <- levels(fct_rev(up_gene_pathway$value))
 
 up_input <- list(
   "Cytokine Signaling in Immune system" = up_gene_char[[1]],
-  "regulation of defense response" = up_gene_char[[5]],
+  "Interferon Signaling" = up_gene_char[[7]],
   "positive regulation of cell death" = up_gene_char[[8]],
-  "TNF weak inducer of apoptosis signaling pathway" = up_gene_char[[11]], 
-  "Lipid and atherosclerosis"  = up_gene_char[[15]], 
   "VEGFA-VEGFR2 signaling pathway" = up_gene_char[[16]]
 )
 up_data <- fromList(up_input)
@@ -606,7 +624,7 @@ GO_1_top <- head(GO_1, 30)
 
 GO_2 <-
   subset(up_df,
-         up_df$variable == "regulation of defense response"
+         up_df$variable == "Interferon Signaling"
          & up_df$value == 1)
 GO_2 <- subset(GO_2, tissue == "Brain")
 GO_2_top <- head(GO_2, 30)
@@ -620,24 +638,10 @@ GO_3_top <- head(GO_3, 30)
 
 GO_4 <-
   subset(up_df,
-         up_df$variable == "TNF weak inducer of apoptosis signaling pathway"
+         up_df$variable == "VEGFA-VEGFR2 signaling pathway"
          & up_df$value == 1)
 GO_4 <- subset(GO_4, tissue == "Brain")
 GO_4_top <- head(GO_4, 30)
-
-GO_5 <-
-  subset(up_df,
-         up_df$variable == "Lipid and atherosclerosis"
-         & up_df$value == 1)
-GO_5 <- subset(GO_5, tissue == "Brain")
-GO_5_top <- head(GO_5, 30)
-
-GO_6 <-
-  subset(up_df,
-         up_df$variable == "VEGFA-VEGFR2 signaling pathway"
-         & up_df$value == 1)
-GO_6 <- subset(GO_6, tissue == "Brain")
-GO_6_top <- head(GO_6, 30)
 ```
 ### up 1 heatmap 
 ```{r}
@@ -720,8 +724,8 @@ up_GO_2_lcpm_heat <- ggplot(data = GO_2_DEG, aes(x = tissue, y = gene)) +
     axis.title.y = element_blank(), 
     axis.text.y = element_text(size = 6, margin = margin(r = -2)),
     axis.ticks.y=element_blank()) +
-    ggtitle("regulation of 
-defense response") 
+    ggtitle("Interferon 
+Signaling") 
 up_GO_2_lcpm_heat
 ```
 ### up 3 heatmap 
@@ -805,96 +809,11 @@ up_GO_4_lcpm_heat <- ggplot(data = GO_4_DEG, aes(x = tissue, y = gene)) +
     axis.title.y = element_blank(), 
     axis.text.y = element_text(size = 6, margin = margin(r = -2)),
     axis.ticks.y=element_blank()) +
-    ggtitle("TNF-related weak 
-inducer of apoptosis
+    ggtitle("VEGFA-VEGFR2 
 signaling pathway") 
 up_GO_4_lcpm_heat
 ```
 
-### up 5 heatmap 
-```{r}
-# lock in gene order which is sorted by adjusted p-value
-GO_5_DEG <- subset(up_df, up_df$gene %in% GO_5_top$gene)
-GO_5_DEG$gene <- factor(GO_5_DEG$gene,
-                          levels = unique(GO_5_top$gene))
-GO_5_DEG$gene <- fct_rev(GO_5_DEG$gene)
-# heatmap 
-up_GO_5_lcpm_heat <- ggplot(data = GO_5_DEG, aes(x = tissue, y = gene)) +
-  geom_tile(aes(fill = logFC)) +
-  ggplot2::facet_grid(~ tissue, scales = "free", switch = "both") +
-  scale_fill_gradient2(
-    low = "white",
-    mid = "red",
-    high = "maroon",
-    midpoint = 4.5,
-    space = "rgb",
-    guide = "colourbar",
-    breaks = c(0, 3, 6, 9),
-    limits = c(0,9),
-    name = expression(log[2](CPM))
-  ) +
-  scale_x_discrete(expand = c(0,0)) +
-  theme_bw() +
-  theme(
-    strip.text = element_text(size = 6),
-    legend.position = "none",
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    plot.margin = margin(0.2, 0.5, 0.2, 0.2, "cm"), 
-    panel.spacing = unit(0,'lines'), 
-    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
-    axis.title.x=element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x=element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
-    axis.ticks.y=element_blank()) +
-    ggtitle("Lipid and 
-atherosclerosis") 
-up_GO_5_lcpm_heat
-```
-### up 6 heatmap 
-```{r}
-# lock in gene order which is sorted by adjusted p-value
-GO_6_DEG <- subset(up_df, up_df$gene %in% GO_6_top$gene)
-GO_6_DEG$gene <- factor(GO_6_DEG$gene,
-                          levels = unique(GO_6_top$gene))
-GO_6_DEG$gene <- fct_rev(GO_6_DEG$gene)
-# heatmap 
-up_GO_6_lcpm_heat <- ggplot(data = GO_6_DEG, aes(x = tissue, y = gene)) +
-  geom_tile(aes(fill = logFC)) +
-  ggplot2::facet_grid(~ tissue, scales = "free", switch = "both") +
-  scale_fill_gradient2(
-    low = "white",
-    mid = "red",
-    high = "maroon",
-    midpoint = 4.5,
-    space = "rgb",
-    guide = "colourbar",
-    breaks = c(0, 3, 6, 9),
-    limits = c(0,9),
-    name = expression(log[2](CPM))
-  ) +
-  scale_x_discrete(expand = c(0,0)) +
-  theme_bw() +
-  theme(
-    strip.text = element_text(size = 6),
-    legend.position = "none",
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    plot.margin = margin(0.2, 0.5, 0.2, 0.2, "cm"), 
-    panel.spacing = unit(0,'lines'), 
-    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
-    axis.title.x=element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x=element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
-    axis.ticks.y=element_blank()) +
-    ggtitle("VEGFA-VEGFR2 
-signaling pathway") 
-up_GO_6_lcpm_heat
-```
 ## up heatmap legend
 ```{r}
 legend_data_up <- ggplot(data = GO_2_DEG, aes(x = tissue, y = gene)) +
@@ -953,8 +872,7 @@ down_input <- list(
   "angiogenesis" = down_gene_char[[1]], 
   "lymph vessel development" = down_gene_char[[4]],
   "endothelium development" = down_gene_char[[5]],
-  "RAC1 GTPase cycle" = down_gene_char[[8]],
-  "phagocytosis" = down_gene_char[[11]]
+  "RAC1 GTPase cycle" = down_gene_char[[8]]
 )
 down_data <- fromList(down_input)
 down_data$gene <- row.names(down_data)
@@ -1172,47 +1090,6 @@ down_GO_4_lcpm_heat <- ggplot(data = GO_4_DEG, aes(x = tissue, y = gene)) +
 cycle") 
 down_GO_4_lcpm_heat
 ```
-### down 5 heatmap 
-```{r}
-# lock in gene order which is sorted by adjusted p-value
-GO_5_DEG <- subset(down_df, down_df$gene %in% GO_5_top$gene)
-GO_5_DEG$gene <- factor(GO_5_DEG$gene,
-                          levels = unique(GO_5_top$gene))
-#GO_5_DEG$gene <- fct_rev(GO_5_DEG$gene)
-# heatmap 
-down_GO_5_lcpm_heat <- ggplot(data = GO_5_DEG, aes(x = tissue, y = gene)) +
-  geom_tile(aes(fill = logFC)) +
-  ggplot2::facet_grid(~ tissue, scales = "free", switch = "both") +
-  scale_fill_gradient2(
-    low = "navyblue",
-    mid = "blue",
-    high = "white",
-    midpoint = -3,
-    space = "rgb",
-    guide = "colourbar",
-    breaks = c(-6, -4, -2,  0),
-    limits = c(-6,0),
-    name = expression(log[2](CPM))
-  ) +
-  scale_x_discrete(expand = c(0,0)) +
-  theme_bw() +
-  theme(
-    strip.text = element_text(size = 6),
-    legend.position = "none",
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    plot.margin = margin(0.2, 0.5, 0.2, 0.2, "cm"), 
-    panel.spacing = unit(0,'lines'), 
-    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
-    axis.title.x=element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x=element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
-    axis.ticks.y=element_blank()) +
-    ggtitle("phagocytosis") 
-down_GO_5_lcpm_heat
-```
 
 ## down heatmap legend
 ```{r}
@@ -1297,9 +1174,8 @@ row2_left <- ggarrange(
 row2_right <- ggarrange(
   down_GO_3_lcpm_heat, 
   down_GO_4_lcpm_heat, 
-  down_GO_5_lcpm_heat, 
-  nrow = 3, 
-  labels = c("e)", "f)", "g)"),
+  nrow = 2, 
+  labels = c("e)", "f)"),
   font.label = list(size = 8)
 )
 
@@ -1325,11 +1201,15 @@ row3 <-
 row4 <- ggarrange(
   up_GO_1_lcpm_heat, 
   up_GO_2_lcpm_heat, 
+  up_GO_3_lcpm_heat, 
   up_GO_4_lcpm_heat, 
-  up_GO_5_lcpm_heat, 
+  up_GO_1_lcpm_heat, 
+  up_GO_2_lcpm_heat, 
+  up_GO_3_lcpm_heat, 
+  up_GO_4_lcpm_heat, 
   nrow = 1, 
-  ncol = 4,
-  labels = c("h)", "i)", "j)", "k)"),
+  ncol = 8,
+  labels = c("h)", "i)", "j)", "k)", "h)", "i)", "j)", "k)"),
   font.label = list(size = 8)
 )
 

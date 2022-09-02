@@ -38,7 +38,7 @@ library(data.table)
 
 # User defined variables
 ```{r set_variables}
-tissue <- c("Blood") # Kidney or Brain
+tissue <- c("Kidney") # Kidney or Brain
 control <- "Saline"
 treatment <- "LPS"
 control_color <- "gray29"
@@ -133,6 +133,9 @@ protein_coding_genes <- subset(genes, genes$gene_biotype == "protein_coding")
       "/v7_ensembl_protein_coding_genes.txt",
       sep = ""
     )
+protein_coding_genes <- protein_coding_genes %>% mutate(gene_name = coalesce(gene_name,gene_id))
+saveRDS(protein_coding_genes$gene_name, file = paste0("../../rObjects/gene_options.rds"))
+
   write.table(
     protein_coding_genes,
     path,
@@ -496,6 +499,19 @@ path <-
          "_gene_boxplot")
 saveToPDF(paste0(path, ".pdf"), width = 6, height = 4)
 ```
+# save filtered dge
+```{r save_dge_filtered_norm}
+saveRDS(dge.filtered.norm,
+        file = paste0(
+          "../../rObjects/",
+          treatment,
+          "_",
+          tool,
+          "_",
+          tolower(tissue),
+          "_dge.filtered.norm.rds"
+        ))
+```
 # Design matrix
 ```{r design_matrix}
 min <- as.numeric(dge.filtered.norm$samples$duration_min)
@@ -587,6 +603,7 @@ path <-
          "_gene_final_mean_var")
 saveToPDF(paste0(path, ".pdf"), width = 6, height = 4)
 ```
+
 ```{r save_genelist}
 saveRDS(v,
         file = paste0(
