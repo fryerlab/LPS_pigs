@@ -239,6 +239,11 @@ res <- cor.test(shared$logFC.x, shared$logFC.y,
 p_value <- round(res$p.value, 3)
 rho_value <- round(res$estimate, 3) 
 
+
+shared_sub <- subset(shared, 
+                     (logFC.x > 0 & logFC.y < 0) |
+                     (logFC.x < 0 & logFC.y > 0) | 
+                     (logFC.x > 1 & logFC.y < 3))
 corr_plot_shared_DEGs <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
    annotate(
     "rect",
@@ -258,6 +263,18 @@ corr_plot_shared_DEGs <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, tex
     alpha = .5
   ) +
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = shared, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 18)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7, margin = margin(0,0,0,0))) +
@@ -499,6 +516,19 @@ up1_corr_plot <- ggplot(data = GO_1, aes(x = logFC.x, y = logFC.y, text = paste(
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_1, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -539,6 +569,18 @@ up2_corr_plot <- ggplot(data = GO_2, aes(x = logFC.x, y = logFC.y, text = paste(
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_2, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -580,6 +622,18 @@ up3_corr_plot <- ggplot(data = GO_3, aes(x = logFC.x, y = logFC.y, text = paste(
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_3, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -620,6 +674,18 @@ up4_corr_plot <- ggplot(data = GO_4, aes(x = logFC.x, y = logFC.y, text = paste(
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_4, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -718,6 +784,18 @@ down1_corr_plot <- ggplot(data = GO_1, aes(x = logFC.x, y = logFC.y, text = past
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_1, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -757,6 +835,18 @@ down2_corr_plot <- ggplot(data = GO_2, aes(x = logFC.x, y = logFC.y, text = past
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_2, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -797,6 +887,18 @@ down3_corr_plot <- ggplot(data = GO_3, aes(x = logFC.x, y = logFC.y, text = past
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_3, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -836,6 +938,18 @@ down4_corr_plot <- ggplot(data = GO_4, aes(x = logFC.x, y = logFC.y, text = past
     alpha = .5
   ) +  
   geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_4, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
   geom_point(size = 1) + 
   theme_bw() +
   theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
@@ -931,7 +1045,7 @@ together <- ggarrange(row1, row4, row2, row3, row5, row6, nrow = 6, heights = c(
 together
 path <- paste0("../../../results/manuscript_figures/Figure_",
                "shared_DEGs_brain_kidney",
-               "_correlation")
+               "_correlation_v2")
 saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
 ```
 # session info

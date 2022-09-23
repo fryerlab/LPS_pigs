@@ -543,7 +543,7 @@ up_and_down_enrich_plot <-
   scale_fill_gradientn(
     colours = c("darkmagenta", "mediumorchid3", "grey"),
     guide = "legend",
-    limits = c(-45,0)
+    limits = c(-15,0)
   ) +
     theme(strip.text = element_text(size = 6), 
           axis.text.y = element_text(size = 7),
