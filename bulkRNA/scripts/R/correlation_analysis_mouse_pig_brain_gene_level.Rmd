@@ -196,8 +196,8 @@ uniqueToPig <-
 
 
 # Venn diagram to see total DEGs between mouse and pig
-x = list(mouse = mouse_limma_FDRq0.05_orth$ortholog_name,
-         pig = pig_brain_FDRq0.05_orth$ortholog_name)
+x = list(mouse = mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+         pig = pig_brain_FDRq0.05_orth_1n$ortholog_name)
 
 mouse_pig_venn <- ggvenn(
   x,

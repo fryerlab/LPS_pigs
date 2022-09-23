@@ -133,6 +133,7 @@ p <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name)
   x = "kidney",
   y = "brain"
 )  
+p
 ggplotly(p)
 ```
 
