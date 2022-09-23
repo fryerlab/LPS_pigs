@@ -1,0 +1,1053 @@
+---
+title: "Upset Plot"
+author: "Kimberly Olney"
+date: "6/14/2022"
+output: html_document
+---
+
+# Setup
+```{r setup, include=FALSE}
+# Also do Session > Set Working Directory > Choose Directory
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r packages}
+library(UpSetR)
+library(ComplexUpset)
+library(ggplot2movies)
+library(ggpubr)
+library(forcats)
+library(stringr)
+```
+
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+```
+# Binary list shared gene function
+```{r}
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+  }
+```
+
+# User defined variables
+```{r set_variables}
+tissue <- "shared_bt_brain_and_kidney"
+control <- "Saline"
+treatment <- "LPS"
+control_color <- "gray29"
+treatment_color <- "purple"
+tool = c("star")
+```
+
+# Read in DEGs
+```{r}
+star_brain <- read.delim("../../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt", 
+                    header = TRUE, sep = "\t")
+star_kidney <- read.delim("../../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt", 
+                     header = TRUE, sep = "\t")
+```
+
+# Subset lists
+```{r}
+up_star_brain <- subset(star_brain$gene_name, star_brain$logFC > 0)
+down_star_brain <- subset(star_brain$gene_name, star_brain$logFC < 0)
+
+up_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC > 0)
+down_star_kidney <- subset(star_kidney$gene_name, star_kidney$logFC < 0)
+```
+
+# Upset plot between kidney and brain
+```{r}
+list_input <- list("Brain down-regulated" = down_star_brain,
+                   "Brain up-regulated" = up_star_brain,
+                   "Kidney down-regulated" = down_star_kidney,
+                   "Kidney up-regulated" = up_star_kidney)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, set_sizes=FALSE,
+      c('Brain down-regulated','Brain up-regulated','Kidney down-regulated', 
+      'Kidney up-regulated'),
+  queries=list(
+    upset_query(set='Brain down-regulated', fill='blue'),
+    upset_query(set='Brain up-regulated', fill='red'),
+    upset_query(set='Kidney down-regulated', fill='blue'),
+    upset_query(set='Kidney up-regulated', fill='red')
+  ),
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.5,   # reduce width of the bars
+      )
+      # add some space on the top of the bars
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.05)))
+      + theme(
+          # hide grid lines
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          # show axis lines
+          axis.line=element_line(colour='black')
+      )
+    )
+  ),
+  stripes=upset_stripes(
+    geom=geom_segment(size=12),  # make the stripes larger
+    colors=c('grey95', 'white')
+  ),
+  # to prevent connectors from getting the colorured
+  # use `fill` instead of `color`, together with `shape='circle filled'`
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=3,
+        stroke=0.45
+      )
+  ),
+  sort_sets='descending',
+  sort_intersections='descending'
+)
+upset_gene
+```
+
+# Upset plot pretty
+```{r}
+list_input <- list("Brain down" = down_star_brain,
+                   "Kidney down" = down_star_kidney,
+                   "Kidney up" = up_star_kidney,
+                  "Brain up" = up_star_brain)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, 
+      c('Brain down','Kidney down',
+        'Brain up', 'Kidney up'),
+      themes=upset_modify_themes(
+        list('intersections_matrix'=theme(text=element_text(size=6)),
+          'overall_sizes' = theme(axis.text.x = element_text(size =6)))),
+  queries=list(
+    upset_query(set='Brain down', fill='blue'),
+    upset_query(set='Kidney down', fill='blue'),
+    upset_query(set='Brain up', fill='red'),
+    upset_query(set='Kidney up', fill='red'),
+    upset_query(intersect = c('Kidney down','Brain down'), color='blue',fill='blue', only_components=c('intersections_matrix', 'Intersection size')),
+    upset_query(intersect = c('Kidney up','Brain up'), color='red',fill='red', only_components=c('intersections_matrix', 'Intersection size'))
+  ),
+  intersections =list(c('Brain down', 'Kidney down'), 
+                      'Kidney down', 'Brain down', 
+                      c('Brain up', 'Kidney up'), 
+                      'Kidney up', 'Brain up',
+                      c('Brain down', 'Kidney up'), 
+                      c('Brain up', 'Kidney down')
+                      ),
+  
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        size=1,
+        text = list(size = 2),
+        text_mapping = aes(),
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.3,   # reduce width of the bars
+        mapping=aes(fill='bars_color')
+      )
+      + scale_fill_manual(values=c('grey'), guide='none')
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          axis.line=element_line(colour='black')))),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=2,
+        stroke=0.45)) +
+        theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6)),
+  set_sizes=(
+    upset_set_size(geom=geom_bar(width=0.4), position="right")
+    + theme(axis.line.x=element_line(colour='black'), 
+            axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+            axis.title.x = element_text(size = 6),
+            axis.ticks.x=element_line())),
+  sort_sets=FALSE,
+  sort_intersections=FALSE)
+upset_gene
+```
+# Correlation plot
+## read in pig data 
+```{r}
+# brain
+pig_brain_FDRq0.05 <-
+  read.delim("../../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq0.05.txt")
+pig_brain_FDRq1.00 <-
+  read.delim("../../../results/star/DEGs/LPS_Brain_gene_DEGs_FDRq1.00.txt")
+
+# kidney
+pig_kidney_FDRq0.05 <-
+  read.delim("../../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq0.05.txt")
+pig_kidney_FDRq1.00 <-
+  read.delim("../../../results/star/DEGs/LPS_Kidney_gene_DEGs_FDRq1.00.txt")
+```
+
+## shared and unique between brain and kidney 
+```{r}
+# rename GeneName to gene_name to merge data sets and find intersections
+kidneyBrain <- merge(pig_kidney_FDRq1.00, pig_brain_FDRq1.00, by = "gene_name")
+
+shared_gene_name <- intersect(pig_brain_FDRq0.05$gene_name, pig_kidney_FDRq0.05$gene_name)
+uniqueToKidney_gene_name <- setdiff(pig_kidney_FDRq0.05$gene_name, pig_brain_FDRq0.05$gene_name)
+uniqueToBrain_gene_name <- setdiff(pig_brain_FDRq0.05$gene_name, pig_kidney_FDRq0.05$gene_name)
+
+shared <- kidneyBrain[kidneyBrain$gene_name %in% shared_gene_name, ]
+uniqueToBrain <- kidneyBrain[kidneyBrain$gene_name %in% uniqueToBrain_gene_name, ]
+uniqueToKidney <- kidneyBrain[kidneyBrain$gene_name %in% uniqueToKidney_gene_name, ]
+# Venn diagram to see what is gained and lost between the reanalysis
+x = list(brain = pig_brain_FDRq0.05$gene_name, kidney = pig_kidney_FDRq0.05$gene_name)
+ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "blue"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+```
+
+## correlation plot - all
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+
+shared_sub <- subset(shared, 
+                     (logFC.x > 0 & logFC.y < 0) |
+                     (logFC.x < 0 & logFC.y > 0) | 
+                     (logFC.x > 1 & logFC.y < 3))
+corr_plot_shared_DEGs <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = -6,
+    ymin = 0,
+    ymax = -6,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = shared, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 18)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7, margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "Shared DEGs between brain and kidney",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-6, 9, by = 1), limits = c(-6, 9)) +
+  scale_x_continuous(breaks = seq(-6, 9, by = 1), limits = c(-6, 9))
+corr_plot_shared_DEGs
+```
+# Metascape Enrichment 
+### Format the dataframes
+```{r}
+# read in enrichment analysis results
+up_enrich_results <-
+  read.delim(
+    paste0(
+      "../../../results/",
+      tool,
+      "/metascape/shared_DEGs_brain_kidney_up.txt"
+    ),
+    sep = "\t",
+    header = TRUE
+  )
+
+down_enrich_results <-
+  read.delim(
+    paste0(
+      "../../../results/",
+      tool,
+      "/metascape/shared_DEGs_brain_kidney_down.txt"
+    ),
+    sep = "\t",
+    header = TRUE
+  )
+
+# select the GO term IDs we want to show in the plot
+GO_ID_up <-
+  c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+    "5_Summary",
+    "6_Summary",
+    "7_Summary",
+    "8_Summary",
+    "9_Summary", 
+    "10_Summary",
+    "11_Summary",
+    "12_Summary",
+    "13_Summary",
+    "14_Summary",
+    "15_Summary",
+    "16_Summary",
+    "17_Summary",
+    "18_Summary",
+    "19_Summary", 
+    "20_Summary"
+  )
+GO_ID_down <- c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+    "5_Summary",
+    "6_Summary",
+    "7_Summary",
+    "8_Summary",
+    "9_Summary", 
+    "10_Summary",
+    "11_Summary"
+)
+
+up_enrich_results_subset <-
+  up_enrich_results[up_enrich_results$GroupID %in% GO_ID_up, ]
+up_enrich_results_subset$Cluster <- c("up-regulated")
+up_enrich_results_subset$Description <-
+  factor(up_enrich_results_subset$Description,
+         levels = up_enrich_results_subset$Description)
+up_enrich_results_subset$Description <-
+  fct_rev(up_enrich_results_subset$Description)
+
+down_enrich_results_subset <-
+  down_enrich_results[down_enrich_results$GroupID %in% GO_ID_down, ]
+down_enrich_results_subset$Cluster <- c("down-regulated")
+down_enrich_results_subset$Description <-
+  factor(down_enrich_results_subset$Description,
+         levels = down_enrich_results_subset$Description)
+down_enrich_results_subset$Description <-
+  fct_rev(down_enrich_results_subset$Description)
+
+# get the number of genes in each summary
+up_gene_count <-
+  strsplit(as.character(up_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+up_gene_count_df <-
+  data.frame(matrix(
+    unlist(up_gene_count),
+    nrow = length(up_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+up_enrich_results_subset$InTerm <- as.numeric(up_gene_count_df$X1)
+up_enrich_results_subset$InList <- as.numeric(up_gene_count_df$X2)
+
+down_gene_count <-
+  strsplit(as.character(down_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+down_gene_count_df <-
+  data.frame(matrix(
+    unlist(down_gene_count),
+    nrow = length(down_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+down_enrich_results_subset$InTerm <- as.numeric(down_gene_count_df$X1)
+down_enrich_results_subset$InList <- as.numeric(down_gene_count_df$X2)
+
+# combine together
+up_and_down_enrich_results_subset <- rbind(up_enrich_results_subset, down_enrich_results_subset)
+
+up_and_down_enrich_results_subset$Description <- gsub(
+  "TNF-related weak inducer of apoptosis (TWEAK) signaling pathway",
+  "TNF weak inducer of apoptosis signaling pathway", fixed=TRUE,
+  up_and_down_enrich_results_subset$Description)
+
+
+up_and_down_enrich_results_subset$Description <-
+  factor(up_and_down_enrich_results_subset$Description, levels = unique(up_and_down_enrich_results_subset$Description)) 
+
+up_and_down_enrich_results_subset$Description <- fct_rev(up_and_down_enrich_results_subset$Description)
+```
+
+remove files 
+```{r}
+remove(
+  down_enrich_results,
+  down_gene_count,
+  down_gene_count_df,
+  up_enrich_results,
+  up_gene_count,
+  up_gene_count_df
+)
+```
+### Genes in enrichment plot all
+## up 
+[1] Cytokine Signaling in Immune system                            
+ [2] response to virus                                              
+ [3] TNF signaling pathway                                          
+ [4] response to lipopolysaccharide                                 
+ [5] regulation of defense response                                 
+ [6] positive regulation of cytokine production                     
+ [7] Interferon Signaling                                           
+ [8] positive regulation of cell death                              
+ [9] Epstein-Barr virus infection                                   
+[10] regulation of response to biotic stimulus                      
+[11] TNF-related weak inducer of apoptosis (TWEAK) signaling pathway
+[12] PID P53 DOWNSTREAM PATHWAY                                     
+[13] Orexin receptor pathway                                        
+[14] immune system development                                      
+[15] Lipid and atherosclerosis                                      
+[16] VEGFA-VEGFR2 signaling pathway                                 
+[17] Human T-cell leukemia virus 1 infection                        
+[18] response to tumor necrosis factor                              
+[19] cellular response to external stimulus                         
+[20] regulation of response to cytokine stimulus 
+```{r}
+up_enrich_df <-
+  up_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
+up_enrich_df_melt <- reshape2::melt(up_enrich_df)
+up_gene_char <- str_split(up_enrich_df_melt$Symbols, ",")
+
+up_gene_pathway <-
+  data.frame(gene = unlist(up_gene_char),
+             value = rep(up_enrich_df$Description, lengths(up_gene_char)))
+up_pathways_levels <- levels(fct_rev(up_gene_pathway$value))
+
+up_input <- list(
+  "Cytokine Signaling in Immune system" = up_gene_char[[1]],
+  "Interferon Signaling" = up_gene_char[[7]],
+  "positive regulation of cell death" = up_gene_char[[8]],
+  "VEGFA-VEGFR2 signaling pathway" = up_gene_char[[16]]
+)
+up_data <- fromList(up_input)
+up_data$gene <- row.names(up_data)
+up_data_melt <- reshape2::melt(up_data)
+
+# get the fold change value for those genes
+shared$gene <- shared$gene_name
+up_df <- merge(up_data_melt, shared,
+                       by = "gene")
+
+# subset by GO termes
+GO_1 <-
+  subset(up_df,
+         up_df$variable == "Cytokine Signaling in Immune system"
+         & up_df$value == 1)
+GO_2 <-
+  subset(up_df,
+         up_df$variable == "Interferon Signaling"
+         & up_df$value == 1)
+GO_3 <-
+  subset(up_df,
+         up_df$variable == "positive regulation of cell death"
+         & up_df$value == 1)
+GO_4 <-
+  subset(up_df,
+         up_df$variable == "VEGFA-VEGFR2 signaling pathway"
+         & up_df$value == 1)
+GO_1$gene
+```
+### up 1 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+up1_corr_plot <- ggplot(data = GO_1, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_1, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "Cytokine Signaling 
+in Immune system",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9)) +
+  scale_x_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9))
+up1_corr_plot
+```
+### up 2 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+up2_corr_plot <- ggplot(data = GO_2, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_2, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "Interferon 
+Signaling",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9)) +
+  scale_x_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9))
+up2_corr_plot
+```
+
+### up 3 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+up3_corr_plot <- ggplot(data = GO_3, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_3, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "positive regulation 
+of cell death",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9)) +
+  scale_x_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9))
+up3_corr_plot
+```
+### up 4 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+up4_corr_plot <- ggplot(data = GO_4, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_4, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "VEGFA-VEGFR2 
+signaling pathway",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9)) +
+  scale_x_continuous(breaks = seq(0, 9, by = 1), limits = c(0, 9))
+up4_corr_plot
+```
+
+### Genes in enrichment plot all
+## down 
+* [1] angiogenesis                                             
+ [2] hematopoietic or lymphoid organ development              
+ [3] Hematopoietic stem cell differentiation                  
+* [4] lymph vessel development                                 
+* [5] endothelium development                                  
+ [6] regulation of cytoskeleton organization                  
+ [7] Epithelial to mesenchymal transition in colorectal cancer
+* [8] RAC1 GTPase cycle                                        
+ [9] regulation of protein binding                            
+[10] cellular response to growth factor stimulus              
+* [11] phagocytosis
+```{r}
+down_enrich_df <-
+  down_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
+down_enrich_df_melt <- reshape2::melt(down_enrich_df)
+down_gene_char <- str_split(down_enrich_df_melt$Symbols, ",")
+
+down_gene_pathway <-
+  data.frame(gene = unlist(down_gene_char),
+             value = rep(down_enrich_df$Description, lengths(down_gene_char)))
+down_pathways_levels <- levels(fct_rev(down_gene_pathway$value))
+
+down_input <- list(
+  "angiogenesis" = down_gene_char[[1]], 
+  "lymph vessel development" = down_gene_char[[4]],
+  "endothelium development" = down_gene_char[[5]],
+  "RAC1 GTPase cycle" = down_gene_char[[8]]
+)
+down_data <- fromList(down_input)
+down_data$gene <- row.names(down_data)
+down_data_melt <- reshape2::melt(down_data)
+
+# get the fold change value for those genes
+shared$gene <- shared$gene_name
+down_df <- merge(down_data_melt, shared,
+                       by = "gene")
+
+# subset by GO termes
+GO_1 <-
+  subset(down_df,
+         down_df$variable == "angiogenesis"
+         & down_df$value == 1)
+GO_2 <-
+  subset(down_df,
+         down_df$variable == "lymph vessel development"
+         & down_df$value == 1)
+GO_3 <-
+  subset(down_df,
+         down_df$variable == "endothelium development"
+         & down_df$value == 1)
+GO_4 <-
+  subset(down_df,
+         down_df$variable == "RAC1 GTPase cycle"
+         & down_df$value == 1)
+```
+### down 1 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+down1_corr_plot <- ggplot(data = GO_1, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = -6,
+    ymin = -6,
+    ymax = 0,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_1, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "angiogenesis",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0)) +
+  scale_x_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0))
+down1_corr_plot
+```
+### down 2 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+down2_corr_plot <- ggplot(data = GO_2, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = -6,
+    ymin = -6,
+    ymax = 0,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_2, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "lymph vessel development",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0)) +
+  scale_x_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0))
+down2_corr_plot
+```
+
+### down 3 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+down3_corr_plot <- ggplot(data = GO_3, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = -6,
+    ymin = -6,
+    ymax = 0,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_3, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "endothelium development",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0)) +
+  scale_x_continuous(breaks = seq(-6, 0, by = 1), limits = c(-6, 0))
+down3_corr_plot
+```
+### down 4 correlation
+```{r}
+# Shapiro-Wilk normality test 
+shapiro.test(shared$logFC.x)
+shapiro.test(shared$logFC.y)
+
+# correlation test 
+res <- cor.test(shared$logFC.x, shared$logFC.y, 
+                    method = "spearman")
+p_value <- round(res$p.value, 3)
+rho_value <- round(res$estimate, 3) 
+
+down4_corr_plot <- ggplot(data = GO_4, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = -3,
+    ymin = -3,
+    ymax = 0,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +  
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = GO_4, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 1.75, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7,margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "RAC1 GTPase cycle",
+  x = expression(paste("kidney ", log[2](FC))),
+  y = expression(paste("brain ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-3, 0, by = 1), limits = c(-3, 0)) +
+  scale_x_continuous(breaks = seq(-3, 0, by = 1), limits = c(-3, 0))
+down4_corr_plot
+```
+
+# Combine plot 
+```{r}
+row1_left <- ggarrange(
+  upset_gene,
+  labels = c("a)"),
+  font.label = list(size = 8)
+  )
+row1_right <- ggarrange(
+  corr_plot_shared_DEGs,
+  labels = c("b)"),
+  font.label = list(size = 8)
+)
+row1 <- ggarrange(
+  row1_left,
+  row1_right,
+  ncol = 2, 
+  widths = c(1, 1)
+)
+row1
+
+
+row2 <-
+  ggarrange(
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+    ncol = 4,
+    labels = c("up-regulated", "", "", "", ""),
+    font.label = list(size = 7, color = "red")
+  )
+
+row3 <- ggarrange(
+  up1_corr_plot, 
+  up2_corr_plot, 
+  up3_corr_plot, 
+  up4_corr_plot, 
+  ncol = 4,
+  labels = c("d)", "e)", "f)", "g)"),
+  font.label = list(size = 8)
+  )
+
+
+row4 <-
+  ggarrange(
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+    ncol = 4,
+    labels = c("c)"),
+    font.label = list(size = 8)
+  )
+
+row5 <-
+  ggarrange(
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+    ncol = 4,
+    labels = c("down-regulated", "", "", "", ""),
+    font.label = list(size = 7, color = "blue")
+  )
+
+row6 <- ggarrange(
+  down1_corr_plot, 
+  down2_corr_plot, 
+  down3_corr_plot, 
+  down4_corr_plot, 
+  ncol = 4,
+  labels = c("g)", "h)", "i)", "j)"),
+  font.label = list(size = 8)
+  )
+together <- ggarrange(row1, row4, row2, row3, row5, row6, nrow = 6, heights = c(1.25, 1, .075, 1, .075, .75))
+together
+path <- paste0("../../../results/manuscript_figures/Figure_",
+               "shared_DEGs_brain_kidney",
+               "_correlation_v2")
+saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
+```
+# session info
+```{r}
+```

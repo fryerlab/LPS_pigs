@@ -1,0 +1,1435 @@
+---
+title: "Figure_brain"
+author: "Kimberly Olney"
+date: "06/15/2022"
+output: html_document
+---
+
+Main figure showing brain results
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+May to unload all packages 
+lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
+```{r packages}
+library(gprofiler2)
+library(DESeq2)
+library(enrichplot)
+library(DOSE) 
+library(plyr)
+library(ggplot2)
+require(gridExtra)
+library(forcats)
+library(UpSetR)
+library(ComplexUpset)
+library(ggplot2movies)
+library(gtools)
+library(ggnewscale)
+library(ggrepel)
+library(patchwork)
+require(gridExtra)
+library(ggpubr)
+library(scales)
+library("wiggleplotr")
+library("dplyr")
+library("GenomicRanges")
+library("GenomicFeatures")
+library("biomaRt")
+library(tidyverse)
+library(sleuth)
+library(ggtranscript)
+library(magrittr)
+library(dplyr)
+```
+
+# User defined variables
+```{r set_variables}
+tissue <- "Brain"
+control <- "Saline"
+treatment <- "LPS"
+control_color <- "gray65"
+treatment_color <- "purple"
+pathToRef <- c("/research/labs/neurology/fryer/projects/references/pig/ensembl_v7/")
+```
+# Save functions
+These functions with help simultaneously save plots as a png, pdf, and tiff 
+file.
+```{r}
+saveToPDF <- function(...) {
+    d = dev.copy(pdf,...)
+    dev.off(d)
+}
+
+saveToPNG <- function(...) {
+    d = dev.copy(png,...)
+    dev.off(d)
+}
+```
+
+# Binary list shared gene function
+```{r}
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+  }
+```
+
+# Gene level 
+### Format dataframe
+```{r}
+tool = c("star")
+
+treatment_vs_control <- read.table(
+  paste0(
+    "../../../results/",
+    tool,
+    "/DEGs/",
+    treatment,
+    "_",
+    tissue,
+    "_gene_DEGs_FDRq1.00.txt",
+    sep = ""
+  ),
+  header = TRUE,
+  sep = "\t",
+  stringsAsFactors = FALSE
+)
+
+color_values <- vector()
+max <- nrow(treatment_vs_control)
+
+for (i in 1:max) {
+  if (treatment_vs_control$adj.P.Val[i] < 0.05) {
+    if (treatment_vs_control$logFC[i] > 0) {
+      color_values <-
+        c(color_values, 1) # 1 when logFC > 0 and FDRq < 0.05
+    }
+    else if (treatment_vs_control$logFC[i] < 0) {
+      color_values <-
+        c(color_values, 2) # 2 when logFC < 0 and FDRq < 0.05
+    }
+  }
+  else{
+    color_values <- c(color_values, 3) # 3 when FDRq >= 0.05
+  }
+}
+
+treatment_vs_control$color_p0.05 <- factor(color_values)
+up <- treatment_vs_control[treatment_vs_control$color_p0.05 == 1, ]
+up10 <- up[1:5, ]
+up10 <- subset(up10, gene_name != "TNFAIP3")
+
+upFoldChange <-
+  treatment_vs_control[treatment_vs_control$logFC > 4, ]
+upFoldChange <- upFoldChange[4:12, ]
+upFoldChange <- subset(upFoldChange, gene_name != "ENSSSCG00000006286")
+
+
+down <- treatment_vs_control[treatment_vs_control$color_p0.05 == 2, ]
+down <- subset(down, down$logFC < -1.5)
+down10 <- down[1:3, ]
+
+downFoldChange <-
+  treatment_vs_control[treatment_vs_control$logFC < -3 &
+                         treatment_vs_control$adj.P.Val < 0.05, ]
+downFoldChange <- downFoldChange[5:10, ]
+
+goi <-
+  treatment_vs_control[treatment_vs_control$gene_name == "GATA2", ]
+goi2 <-
+  treatment_vs_control[treatment_vs_control$gene_name == "MARVELD2", ]
+
+hadjpval <- (-log10(max(treatment_vs_control$P.Value[treatment_vs_control$adj.P.Val < 0.05],
+                        na.rm = TRUE)))
+```
+### Volcano plot
+```{r}
+gene_volcano <-
+  ggplot(data = treatment_vs_control,
+         aes(
+           x = logFC,
+           y = -log10(P.Value),
+           color = color_p0.05
+         )) +  
+  geom_point(alpha = 0.5, size = 1) +
+  theme_bw() +  
+  theme(legend.position = "none") + 
+  scale_color_manual(values = c("red", "blue", "grey")) + 
+  labs(x = expression(log[2](FC)),
+       y = expression(-log[10] ~ "(" ~ italic("p") ~ "-value)")) +
+       theme(plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+             axis.title.x = element_text(size = 6),
+             axis.text.x = element_text(size = 6)) +
+         theme(axis.title.y = element_text(size = 6),
+               axis.text.y = element_text(size = 6)) +
+         geom_hline(yintercept = hadjpval,
+                    #  horizontal line
+                    colour = "#000000",
+                    linetype = "dashed") +
+        ggtitle(paste0(tissue,"\nFDRq < 0.05")) +
+         theme(plot.title = element_text(size = 7, margin = margin(0,0,0,0))) +
+         geom_text_repel(
+           data = up10,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "maroon",
+           fontface = "italic",
+           size = 2,
+           min.segment.length = unit(0, 'lines'),
+          # nudge_x = 0,
+         #  nudge_y = 0.5,
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 20)
+         ) +
+         geom_text_repel(
+           data = upFoldChange,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "maroon",
+           fontface = "italic",
+           size = 2,
+           min.segment.length = unit(0, 'lines'),
+           nudge_x = .6,
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+         ) +
+         geom_text_repel(
+           data = down10,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "navyblue",
+           fontface = "italic",
+           size = 2,
+           min.segment.length = unit(0, 'lines'),
+           nudge_x = -1,
+           nudge_y = .25,
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+         )  +
+      #   geom_text_repel(
+      #     data = downFoldChange,
+      #     aes(
+      #       x = logFC,
+      #       y = -log10(P.Value),
+      #       label = gene_name
+      #     ),
+       #    color = "navyblue",
+       #    fontface = "italic",
+        #   size = 2,
+        #   min.segment.length = unit(0, 'lines'),
+        #   nudge_x = -.5,
+        #   nudge_y = -.5,
+       #    max.overlaps = getOption("ggrepel.max.overlaps", default = 5)
+       #  ) +
+         geom_text_repel(
+           data = goi,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "navyblue",
+           fontface = "italic",
+           size = 2,
+           nudge_x = -2,
+           nudge_y = 0.5,
+           min.segment.length = unit(0, 'lines'),
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 5)
+         ) +
+         geom_text_repel(
+           data = goi2,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "navyblue",
+           fontface = "italic",
+           size = 2,
+           nudge_x = 2.65,
+           nudge_y = .75,
+           min.segment.length = unit(0, 'lines'),
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 5)
+         ) +
+         scale_y_continuous(breaks = seq(0, 12, by = 1), limits = c(0, 12)) +
+         scale_x_continuous(breaks = seq(-8, 8, by = 2), limits = c(-8, 8))
+gene_volcano
+```
+remove files no longer needed
+```{r}
+remove(
+  down,
+  down10,
+  downFoldChange,
+  goi,
+  goi2,
+  up,
+  up10,
+  upFoldChange,
+  hadjpval,
+  i,
+  max,
+  color_values
+)
+```
+
+# Metascape Enrichment 
+### Format the dataframes
+```{r}
+# read in enrichment analysis results
+up_enrich_results <-
+  read.delim(
+    paste0(
+      "../../../results/",
+      tool,
+      "/metascape/",
+      tolower(tissue),
+      "_up.txt"
+    ),
+    sep = "\t",
+    header = TRUE
+  )
+
+down_enrich_results <-
+  read.delim(
+    paste0(
+      "../../../results/",
+      tool,
+      "/metascape/",
+      tolower(tissue),
+      "_down.txt"
+    ),
+    sep = "\t",
+    header = TRUE
+  )
+```
+
+```{r}
+# select the GO term IDs we want to show in the plot
+GO_ID_up <-
+  c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+    "5_Summary",
+    "6_Summary",
+    "7_Summary",
+    "8_Summary",
+    "9_Summary", 
+    "10_Summary",
+    "11_Summary",
+    "12_Summary",
+    "13_Summary",
+    "14_Summary",
+    "15_Summary",
+    "16_Summary",
+    "17_Summary",
+    "18_Summary",
+    "19_Summary", 
+    "20_Summary"
+  )
+GO_ID_down <- c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+    "5_Summary",
+    "6_Summary",
+    "7_Summary",
+    "8_Summary",
+    "9_Summary", 
+    "10_Summary",
+    "11_Summary",
+    "12_Summary",
+    "13_Summary",
+    "14_Summary",
+    "15_Summary",
+    "16_Summary",
+    "17_Summary",
+    "18_Summary",
+    "19_Summary", 
+    "20_Summary"
+)
+
+up_enrich_results_subset <-
+  up_enrich_results[up_enrich_results$GroupID %in% GO_ID_up, ]
+up_enrich_results_subset$Cluster <- c("up-regulated")
+up_enrich_results_subset$Description <-
+  factor(up_enrich_results_subset$Description,
+         levels = up_enrich_results_subset$Description)
+up_enrich_results_subset$Description <-
+  fct_rev(up_enrich_results_subset$Description)
+
+down_enrich_results_subset <-
+  down_enrich_results[down_enrich_results$GroupID %in% GO_ID_down, ]
+down_enrich_results_subset$Cluster <- c("down-regulated")
+down_enrich_results_subset$Description <-
+  factor(down_enrich_results_subset$Description,
+         levels = down_enrich_results_subset$Description)
+down_enrich_results_subset$Description <-
+  fct_rev(down_enrich_results_subset$Description)
+
+# get the number of genes in each summary
+up_gene_count <-
+  strsplit(as.character(up_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+up_gene_count_df <-
+  data.frame(matrix(
+    unlist(up_gene_count),
+    nrow = length(up_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+up_enrich_results_subset$InTerm <- as.numeric(up_gene_count_df$X1)
+up_enrich_results_subset$InList <- as.numeric(up_gene_count_df$X2)
+
+down_gene_count <-
+  strsplit(as.character(down_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+down_gene_count_df <-
+  data.frame(matrix(
+    unlist(down_gene_count),
+    nrow = length(down_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+down_enrich_results_subset$InTerm <- as.numeric(down_gene_count_df$X1)
+down_enrich_results_subset$InList <- as.numeric(down_gene_count_df$X2)
+
+# combine together
+up_and_down_enrich_results_subset <- rbind(up_enrich_results_subset, down_enrich_results_subset)
+
+up_and_down_enrich_results_subset$Description <-
+      gsub(
+        "regulation of DNA-binding transcription factor activity",
+        "reg of DNA-binding TF activity",
+        up_and_down_enrich_results_subset$Description
+      )
+up_and_down_enrich_results_subset$Description <-
+  factor(up_and_down_enrich_results_subset$Description, levels = unique(up_and_down_enrich_results_subset$Description)) 
+
+up_and_down_enrich_results_subset$Description <- fct_rev(up_and_down_enrich_results_subset$Description)
+```
+
+remove files 
+```{r}
+remove(
+  down_enrich_results,
+  down_gene_count,
+  down_gene_count_df,
+  up_enrich_results,
+  up_gene_count,
+  up_gene_count_df
+)
+```
+
+### Enrichment plot showing log10 P-value
+#### down and up seperately
+```{r}
+down_enrich_plot <-
+  ggplot(data = down_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster) +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .65) +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  theme_bw() +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(x = "Gene count", y = "") +
+  #  xlim(0,60) +
+  guides(fill = guide_legend(
+    size = 1,
+    title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)")
+  )) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-45,-1),
+  ) +
+  theme(legend.text = element_text(size = 6),
+        legend.title = element_text(size = 6))
+down_enrich_plot
+
+up_enrich_plot <-
+  ggplot(data = up_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster) +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .65) +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  theme(legend.text = element_text(size = 6)) +
+  theme_bw() +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(x = "Gene count", y = "") +
+  guides(fill = guide_legend(title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)"))) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-45,-1)
+  ) +
+  theme(legend.text = element_text(size = 6),
+        legend.title = element_text(size = 6))
+up_enrich_plot
+```
+
+#### down and up together
+```{r}
+up_and_down_enrich_plot <-
+  ggplot(data = up_and_down_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster, scales = "free") +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .7, position = position_dodge(width = .2)) +
+  theme_bw() +
+  ggtitle(paste0(tissue," enrichment summaries")) +
+  labs(x = "Gene count", y = NULL) +
+  guides(fill = guide_legend(title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)"))) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-45,-1)
+  ) +
+    theme(strip.text = element_text(size = 6), 
+          axis.text.y = element_text(size = 7),
+          axis.text.x = element_text(size = 6), 
+          axis.title.x = element_text(size = 6), 
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 6),
+          legend.margin=margin(0,0.5,0,0),
+          legend.box.margin=margin(-10,-2,-10,-7.5), 
+          plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+          plot.title = element_text(size = 7, hjust = -3.25, vjust=0, margin = margin(0,0,0,0)))
+up_and_down_enrich_plot
+
+addSmallLegend <- function(myPlot, pointSize = 3, textSize = 6, spaceLegend = .5) {
+    myPlot +
+        guides(shape = guide_legend(override.aes = list(size = pointSize)),
+               color = guide_legend(override.aes = list(size = pointSize))) +
+        theme(legend.title = element_text(size = textSize), 
+              legend.text  = element_text(size = textSize),
+              legend.key.size = unit(spaceLegend, "lines"))
+}
+
+# Apply on original plot
+up_and_down_enrich_plot <- addSmallLegend(up_and_down_enrich_plot)
+```
+
+```{r}
+remove(up_enrich_plot,
+       down_enrich_plot)
+```
+## Combine volcano and enrichment plot 
+```{r}
+row1 <- ggarrange(
+  gene_volcano,
+  up_and_down_enrich_plot,
+  ncol = 2,
+  labels = c("a)", "b)"),
+  widths = c(2.25, 4.75), 
+  font.label = list(size = 8)
+  )
+row1
+
+#path <- paste0("../../../results/manuscript_figures/Figure_",
+#         tolower(tissue),
+ #        "row1_test")
+#saveToPDF(paste0(path, ".pdf"), width = 7, height = 3)
+```
+# CPM data
+```{r}
+# read in counts per million
+cpm <- read.delim(paste0("../../../results/", tool, "/CPM/", treatment, "_",tolower(tissue),
+               "_gene_CPM_expression.txt"))
+# then log2 transform 
+lcpm <- edgeR::cpm(cpm, log = TRUE)
+# save ouput
+#write.table(lcpm, paste0("../../../results/", tool, "/CPM/", treatment, "_",tolower(tissue),
+  #             "_gene_log2CPM_expression.txt"), quote = FALSE, sep = "\t")
+```
+### Fold change information 
+```{r}
+up_regulated <- subset(
+  treatment_vs_control,
+  treatment_vs_control$adj.P.Val <= 0.05 &
+    treatment_vs_control$logFC > 0
+)
+down_regulated <- subset(
+  treatment_vs_control,
+  treatment_vs_control$adj.P.Val <= 0.05 &
+    treatment_vs_control$logFC <= 0
+)
+
+# sort by log2FC and adjusted p-val
+up_regulated_sort <-
+  up_regulated[order(-up_regulated$logFC, up_regulated$adj.P.Val), ]
+down_regulated_sort <-
+  down_regulated[order(down_regulated$logFC, down_regulated$adj.P.Val), ]
+
+# get the lcpm information for those genes of interest
+up_regulated_lcpm <- subset(lcpm, row.names(lcpm) %in%
+                              up_regulated_sort$gene_id)
+down_regulated_lcpm <- subset(lcpm, row.names(lcpm) %in%
+                                down_regulated_sort$gene_id)
+
+# reform the data
+up_regulated_sort_df <- up_regulated_lcpm %>%
+  as.data.frame() %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-c(gene_id), names_to = "samples", values_to = "counts") %>%
+  mutate(samples = fct_relevel(samples, colnames(up_regulated_lcpm)))
+
+down_regulated_sort_df <- down_regulated_lcpm %>%
+  as.data.frame() %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-c(gene_id), names_to = "samples", values_to = "counts") %>%
+  mutate(samples = fct_relevel(samples, colnames(down_regulated_lcpm)))
+
+# lock in gene order which is sorted by adjusted p-value
+up_regulated_sort_df$gene_id <-
+  factor(up_regulated_sort_df$gene_id,
+         levels = unique(up_regulated_sort_df$gene_id))
+up_regulated_sort_df$gene_id <-
+  fct_rev(up_regulated_sort_df$gene_id)
+down_regulated_sort_df$gene_id <-
+  factor(down_regulated_sort_df$gene_id,
+         levels = unique(down_regulated_sort_df$gene_id))
+down_regulated_sort_df$gene_id <-
+  fct_rev(down_regulated_sort_df$gene_id)
+
+DEG_df <-
+  rbind(up_regulated_sort_df, down_regulated_sort_df)
+
+DEG_df$Condition <-
+  ifelse(grepl("LPS", DEG_df$samples),
+         "LPS",
+         "Control")
+
+DEG_df$samples <- factor(
+  DEG_df$samples,
+  levels = c(
+    "X3.Control",
+    "X4.Control",
+    "X6.Control",
+    "X7.Control",
+    "X10.Control",
+    "X11.Control",
+    "X2.LPS",
+    "X8.LPS",
+    "X12.LPS",
+    "X14.LPS"
+  )
+)
+DEG_sort <- rbind(up_regulated_sort, down_regulated_sort)
+names(DEG_sort)[names(DEG_sort) == "gene_name"] <- "gene"
+
+```
+remove files
+```{r}
+remove(
+  cpm,
+  lcpm,
+  down_regulated,
+  down_regulated_lcpm,
+  down_regulated_sort,
+  down_regulated_sort_df,
+  up_regulated,
+  up_regulated_lcpm,
+  up_regulated_sort,
+  up_regulated_sort_df
+)
+```
+
+### Genes in enrichment plot all
+## up 
+ [1] Cytokine Signaling in Immune system                    
+ [2] cellular response to cytokine stimulus                 
+ [3] TNF signaling pathway                                  
+ [4] response to virus                                      
+ [5] positive regulation of cytokine production             
+ [6] regulation of defense response                         
+ [7] positive regulation of cell death                      
+ [8] hematopoietic or lymphoid organ development            
+ [9] regulation of response to biotic stimulus              
+[10] Orexin receptor pathway                                
+[11] regulation of cell adhesion                            
+[12] positive regulation of cell migration                  
+[13] Network map of SARS-CoV-2 signaling pathway            
+[14] vasculature development                                
+[15] regulation of angiogenesis                             
+[16] response to tumor necrosis factor                      
+[17] PID P53 DOWNSTREAM PATHWAY                             
+[18] PID AP1 PATHWAY                                        
+[19] VEGFA-VEGFR2 signaling pathway                         
+[20] regulation of DNA-binding transcription factor activity
+```{r}
+up_enrich_df <-
+  up_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
+up_enrich_df_melt <- reshape2::melt(up_enrich_df)
+up_gene_char <- str_split(up_enrich_df_melt$Symbols, ",")
+
+up_gene_pathway <-
+  data.frame(gene = unlist(up_gene_char),
+             value = rep(up_enrich_df$Description, lengths(up_gene_char)))
+up_pathways_levels <- levels(fct_rev(up_gene_pathway$value))
+
+up_enrich_df <-
+  up_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
+up_enrich_df_melt <- reshape2::melt(up_enrich_df)
+up_gene_char <- str_split(up_enrich_df_melt$Symbols, ",")
+
+up_gene_pathway <-
+  data.frame(gene = unlist(up_gene_char),
+             value = rep(up_enrich_df$Description, lengths(up_gene_char)))
+up_pathways_levels <- levels(fct_rev(up_gene_pathway$value))
+
+up_input <- list(
+  "Cytokine Signaling in Immune system" = up_gene_char[[1]],
+  "positive regulation of cell death" = up_gene_char[[7]],
+  "positive regulation of cell migration" = up_gene_char[[12]],
+  "vasculature development" = up_gene_char[[14]],
+  "regulation of DNA-binding transcription factor activity" = up_gene_char[[20]] 
+)
+up_data <- fromList(up_input)
+up_data$gene <- row.names(up_data)
+up_data_melt <- reshape2::melt(up_data)
+
+# get the fold change value for those genes
+up_df <- merge(up_data_melt, DEG_sort,
+                       by = "gene")
+# order by fold change 
+up_df <- up_df[order(-up_df$logFC, -up_df$adj.P.Val),]
+
+# subset by GO termes
+GO_1 <-
+  subset(up_df,
+         up_df$variable == "Cytokine Signaling in Immune system"
+         & up_df$value == 1)
+GO_1_top <- head(GO_1, 15)
+
+GO_2 <-
+  subset(up_df,
+         up_df$variable == "positive regulation of cell death"
+         & up_df$value == 1)
+GO_2_top <- head(GO_2, 15)
+
+GO_3 <-
+  subset(up_df,
+         up_df$variable == "positive regulation of cell migration"
+         & up_df$value == 1)
+GO_3_top <- head(GO_3, 15)
+
+GO_4 <-
+  subset(up_df,
+         up_df$variable == "vasculature development"
+         & up_df$value == 1)
+GO_4_top <- head(GO_4, 15)
+
+GO_5 <-
+  subset(up_df,
+         up_df$variable == "regulation of DNA-binding transcription factor activity"
+         & up_df$value == 1)
+GO_5_top <- head(GO_5, 15)
+```
+
+#### plot lcpm GO heatmaps
+##### up 1
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_1_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_1_top$gene_id)
+GO_1_DEG <- merge(GO_1_DEG, GO_1_top, by = "gene_id", all.x = TRUE)
+GO_1_DEG$gene <- factor(GO_1_DEG$gene,
+                          levels = unique(GO_1_top$gene))
+GO_1_DEG$gene <- fct_rev(GO_1_DEG$gene)
+# heatmap 
+up_GO_1_lcpm_heat <- ggplot(data = GO_1_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("Cytokine Signaling in 
+Immune system") 
+up_GO_1_lcpm_heat
+```
+##### up 2
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_2_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_2_top$gene_id)
+GO_2_DEG <- merge(GO_2_DEG, GO_2_top, by = "gene_id", all.x = TRUE)
+GO_2_DEG$gene <- factor(GO_2_DEG$gene,
+                          levels = unique(GO_2_top$gene))
+GO_2_DEG$gene <- fct_rev(GO_2_DEG$gene)
+
+# heatmap 
+up_GO_2_lcpm_heat <- ggplot(data = GO_2_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("positive regulation 
+of cell death")
+up_GO_2_lcpm_heat
+```
+##### up 3
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_3_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_3_top$gene_id)
+GO_3_DEG <- merge(GO_3_DEG, GO_3_top, by = "gene_id", all.x = TRUE)
+GO_3_DEG$gene <- factor(GO_3_DEG$gene,
+                          levels = unique(GO_3_top$gene))
+GO_3_DEG$gene <- fct_rev(GO_3_DEG$gene)
+
+# heatmap 
+up_GO_3_lcpm_heat <- ggplot(data = GO_3_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("positive regulation 
+of cell migration")
+up_GO_3_lcpm_heat
+```
+##### up 4
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_4_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_4_top$gene_id)
+GO_4_DEG <- merge(GO_4_DEG, GO_4_top, by = "gene_id", all.x = TRUE)
+
+GO_4_DEG$gene <- factor(GO_4_DEG$gene,
+                          levels = unique(GO_4_top$gene))
+GO_4_DEG$gene <- fct_rev(GO_4_DEG$gene)
+
+# heatmap 
+up_GO_4_lcpm_heat <- ggplot(data = GO_4_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("vasculature 
+development")
+up_GO_4_lcpm_heat
+```
+
+##### up 5
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_5_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_5_top$gene_id)
+GO_5_DEG <- merge(GO_5_DEG, GO_5_top, by = "gene_id", all.x = TRUE)
+
+GO_5_DEG$gene <- factor(GO_5_DEG$gene,
+                          levels = unique(GO_5_top$gene))
+GO_5_DEG$gene <- fct_rev(GO_5_DEG$gene)
+
+# heatmap 
+up_GO_5_lcpm_heat <- ggplot(data = GO_5_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("reg of DNA-binding 
+TF activity")
+up_GO_5_lcpm_heat
+```
+
+clean up
+```{r, eval = FALSE}
+remove(
+  up_data,
+  up_data_melt,
+  up_df,
+  up_enrich_df,
+  up_enrich_df_melt,
+  up_enrich_results_subset,
+  up_gene_char,
+  up_gene_pathway,
+  up_input,
+  GO_1,
+  GO_1_DEG,
+  GO_1_top,
+  GO_2,
+  GO_2_DEG,
+  GO_2_top,
+  GO_3,
+  GO_3_DEG,
+  GO_3_top,
+  GO_4,
+  GO_4_DEG,
+  GO_4_top,
+  GO_5, 
+  GO_5_DEG,
+  GO_5_top
+)
+```
+## down
+ [1] immune system development                      
+ [2] organic acid transport                         
+ [3] vitamin transport                              
+ [4] regulation of actin cytoskeleton organization  
+ [5] embryonic organ morphogenesis                  
+ [6] stem cell proliferation                        
+ [7] lipid transport                                
+ [8] Malignant pleural mesothelioma                 
+ [9] regulation of actin cytoskeleton reorganization
+[10] tight junction assembly                        
+[11] semicircular canal development                 
+[12] Hematopoietic stem cell differentiation        
+[13] blood vessel endothelial cell migration        
+[14] gland development                              
+[15] Nuclear receptors meta-pathway                 
+[16] positive regulation of angiogenesis            
+[17] regulation of animal organ morphogenesis       
+[18] sulfur compound catabolic process              
+[19] morphogenesis of an epithelium                 
+[20] regulation of binding 
+```{r}
+down_enrich_results_subset$Description
+down_enrich_df <-
+  down_enrich_results_subset[, c("GroupID", "Term", "Description", "Symbols")]
+down_enrich_df_melt <- reshape2::melt(down_enrich_df)
+down_gene_char <- str_split(down_enrich_df_melt$Symbols, ",")
+
+down_gene_pathway <-
+  data.frame(gene = unlist(down_gene_char),
+             value = rep(down_enrich_df$Description, lengths(down_gene_char)))
+down_pathways_levels <- levels(fct_rev(down_gene_pathway$value))
+
+down_input <- list(
+  "immune system development" = down_gene_char[[1]],
+  "organic acid transport" = down_gene_char[[2]],
+  "tight junction assembly" = down_gene_char[[10]], 
+  "blood vessel endothelial cell migration" = down_gene_char[[13]],
+  "positive regulation of angiogenesis" = down_gene_char[[16]]
+)
+down_data <- fromList(down_input)
+down_data$gene <- row.names(down_data)
+down_data_melt <- reshape2::melt(down_data)
+
+
+# get the fold change value for those genes
+down_df <- merge(down_data_melt, DEG_sort,
+                       by = "gene")
+# order by fold change 
+down_df <- down_df[order(down_df$logFC, -down_df$adj.P.Val),]
+
+# subset by GO termes
+GO_1 <-
+  subset(down_df,
+         down_df$variable == "immune system development"
+         & down_df$value == 1)
+GO_1_top <- head(GO_1, 15)
+
+GO_2 <-
+  subset(down_df,
+         down_df$variable == "organic acid transport"
+         & down_df$value == 1)
+GO_2_top <- head(GO_2, 15)
+
+GO_3 <-
+  subset(down_df,
+         down_df$variable == "tight junction assembly"
+         & down_df$value == 1)
+GO_3_top <- head(GO_3, 15)
+
+GO_4 <-
+  subset(down_df,
+         down_df$variable == "blood vessel endothelial cell migration"
+         & down_df$value == 1)
+GO_4_top <- head(GO_4, 15)
+
+GO_5 <-
+  subset(down_df,
+         down_df$variable == "positive regulation of angiogenesis"
+         & down_df$value == 1)
+GO_5_top <- head(GO_5, 15)
+```
+#### plot lcpm GO heatmaps
+##### down 1
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_1_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_1_top$gene_id)
+GO_1_DEG <- merge(GO_1_DEG, GO_1_top, by = "gene_id", all.x = TRUE)
+GO_1_DEG$gene <- factor(GO_1_DEG$gene,
+                          levels = unique(GO_1_top$gene))
+GO_1_DEG$gene <- fct_rev(GO_1_DEG$gene)
+
+# heatmap 
+down_GO_1_lcpm_heat <- ggplot(data = GO_1_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+  ggtitle("immune system 
+development") 
+down_GO_1_lcpm_heat
+```
+##### down 2
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_2_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_2_top$gene_id)
+GO_2_DEG <- merge(GO_2_DEG, GO_2_top, by = "gene_id", all.x = TRUE)
+GO_2_DEG$gene <- factor(GO_2_DEG$gene,
+                          levels = unique(GO_2_top$gene))
+GO_2_DEG$gene <- fct_rev(GO_2_DEG$gene)
+
+# heatmap 
+down_GO_2_lcpm_heat <- ggplot(data = GO_2_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("organic acid 
+transport")
+down_GO_2_lcpm_heat
+```
+##### down 3
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_3_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_3_top$gene_id)
+GO_3_DEG <- merge(GO_3_DEG, GO_3_top, by = "gene_id", all.x = TRUE)
+GO_3_DEG$gene <- factor(GO_3_DEG$gene,
+                          levels = unique(GO_3_top$gene))
+GO_3_DEG$gene <- fct_rev(GO_3_DEG$gene)
+
+# heatmap 
+down_GO_3_lcpm_heat <- ggplot(data = GO_3_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("tight junction
+assembly")
+down_GO_3_lcpm_heat
+```
+##### down 4
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_4_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_4_top$gene_id)
+GO_4_DEG <- merge(GO_4_DEG, GO_4_top, by = "gene_id", all.x = TRUE)
+GO_4_DEG$gene <- factor(GO_4_DEG$gene,
+                          levels = unique(GO_4_top$gene))
+GO_4_DEG$gene <- fct_rev(GO_4_DEG$gene)
+
+# heatmap 
+down_GO_4_lcpm_heat <- ggplot(data = GO_4_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("blood vessel 
+endothelial 
+cell migration")
+down_GO_4_lcpm_heat
+```
+##### down 5
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+GO_5_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_5_top$gene_id)
+GO_5_DEG <- merge(GO_5_DEG, GO_5_top, by = "gene_id", all.x = TRUE)
+GO_5_DEG$gene <- factor(GO_5_DEG$gene,
+                          levels = unique(GO_5_top$gene))
+GO_5_DEG$gene <- fct_rev(GO_5_DEG$gene)
+
+# heatmap 
+down_GO_5_lcpm_heat <- ggplot(data = GO_5_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    name = expression(log[2](CPM))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0, 0.2, 0, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("positive regulation 
+of angiogenesis")
+down_GO_5_lcpm_heat
+```
+
+### legend only
+```{r}
+# Extract the legend. Returns a gtable
+# lock in gene order which is sorted by adjusted p-value
+GO_1_DEG <- subset(DEG_df, DEG_df$gene_id %in% GO_1_top$gene_id)
+GO_1_DEG <- merge(GO_1_DEG, GO_1_top, by = "gene_id", all.x = TRUE)
+GO_1_DEG$gene <- factor(GO_1_DEG$gene,
+                          levels = unique(GO_1_top$gene))
+GO_1_DEG$gene <- fct_rev(GO_1_DEG$gene)
+
+# heatmap 
+legend_data <- ggplot(data = GO_1_DEG, aes(x = samples, y = gene)) +
+  geom_tile(aes(fill = counts)) +
+  ggplot2::facet_grid(~ Condition, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "#FFFFCCFF",
+    mid = "#FD8D3CFF",
+    high = "#800026FF",
+    midpoint = 6,
+    space = "rgb",
+    guide = "colourbar",
+    breaks = c(0, 4, 8, 12, 16),
+    limits = c(0,16),
+    labels=c(0, 4, 8, 12, 16), 
+    name = expression(log[2](CPM))
+  ) +
+  theme(
+    legend.position = "top", 
+    legend.text = element_text(size =6), 
+    legend.title = element_text (size = 6), 
+    legend.margin=margin(0,0,1,0),
+  #  legend.direction = "horizontal", 
+    legend.key.size = unit(0.5, "cm"))
+
+legend_data <- addSmallLegend(legend_data)
+
+leg <- get_legend(legend_data)
+# Convert to a ggplot and print
+legend_heat_bar <- as_ggplot(leg)
+legend_heat_bar
+```
+clean up
+```{r, eval =FALSE}
+remove(
+  down_data,
+  down_data_melt,
+  down_df,
+  down_enrich_df,
+  down_enrich_df_melt,
+  down_enrich_results_subset,
+  down_gene_char,
+  down_gene_pathway,
+  down_input,
+  GO_1,
+  GO_1_DEG,
+  GO_1_top,
+  GO_2,
+  GO_2_DEG,
+  GO_2_top,
+  GO_3,
+  GO_3_DEG,
+  GO_3_top,
+  GO_4,
+  GO_4_DEG,
+  GO_4_top,
+  GO_5, 
+  GO_5_DEG,
+  GO_5_top
+)
+```
+
+# Gene-level combine all plots 
+```{r}
+row2 <-
+  ggarrange(
+    NULL,
+    legend_heat_bar,
+    NULL,
+    NULL,
+    ncol = 4,
+    labels = c("up-regulated", "", "", ""),
+    font.label = list(size = 7, color = "red")
+  )
+
+row3 <- ggarrange(
+  up_GO_1_lcpm_heat,
+  up_GO_2_lcpm_heat,
+  up_GO_3_lcpm_heat,
+  up_GO_4_lcpm_heat,
+  up_GO_5_lcpm_heat,
+  ncol = 5,
+  labels = c("c)", "d)", "e)", "f)", "g)"),
+  font.label = list(size = 8)
+  )
+
+row4 <-
+  ggarrange(
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    ncol = 4,
+    labels = c("down-regulated", "", "", ""),
+    font.label = list(size = 7, color = "blue")
+  )
+
+row5 <- ggarrange(
+  down_GO_1_lcpm_heat,
+  down_GO_2_lcpm_heat,
+  down_GO_3_lcpm_heat,
+  down_GO_4_lcpm_heat,
+  down_GO_5_lcpm_heat,
+  ncol = 5,
+  labels = c("h)", "i)", "j)", "k)", "l)"),
+  font.label = list(size = 8)
+  )
+
+combind <-
+  ggarrange(
+    row1,
+    row2,
+    row3,
+    row4,
+    row5,
+    nrow = 5,
+    heights = c(1.65, 0.1, 1, 0.1, 1)
+  )
+combind
+
+path <- paste0("../../../results/manuscript_figures/Figure_",
+               tolower(tissue),
+               "_gene_level_only")
+saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
+```

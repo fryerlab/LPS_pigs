@@ -1,0 +1,750 @@
+---
+title: "Figure_mouse_and_pig_brain"
+author: "Kimberly Olney"
+date: "09/12/2022"
+output: html_document
+---
+
+Main figure showing brain results
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = ".")
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+library(geneName)
+library(plotly)
+library(tidyverse)
+library(htmlwidgets)
+library(ggvenn)
+library(dplyr)
+library(gprofiler2)
+library(stats)
+library(UpSetR)
+library(ComplexUpset)
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include = FALSE}
+saveToPDF <- function(...) {
+  d = dev.copy(pdf, ...)
+  dev.off(d)
+}
+
+addSmallLegend <- function(myPlot, pointSize = 3, textSize = 6, spaceLegend = .5) {
+    myPlot +
+        guides(shape = guide_legend(override.aes = list(size = pointSize)),
+               color = guide_legend(override.aes = list(size = pointSize))) +
+        theme(legend.title = element_text(size = textSize), 
+              legend.text  = element_text(size = textSize),
+              legend.key.size = unit(spaceLegend, "lines"))
+}
+```
+# Binary list shared gene function
+```{r}
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+  }
+```
+# Read in DEG tables
+Note that gene names have already been converted to the human ortholog\
+see correlation_analysis_mouse_pig_brain.Rmd for more details. 
+```{r}
+pig_brain_FDRq1.00_orth_1n <- read.delim("../../../mouse_comparison/results/pig_brain_FDRq1.00_orth_1n.txt",
+  sep = "\t",
+  header = T
+)
+
+mouse_limma_FDRq1.00_orth_1n <- read.delim(
+  "../../../mouse_comparison/results/mouse_limma_FDRq1.00_orth_1n.txt",
+  sep = "\t",
+  header = T
+)
+```
+
+# AdjPval 1.00 Find shared and unique DEGs between mouse and pig
+```{r}
+# rename GeneName to gene_name to merge data sets and find intersections
+mouse_and_pg_df <-
+  merge(mouse_limma_FDRq1.00_orth_1n, pig_brain_FDRq1.00_orth_1n, by = "ortholog_name")
+
+shared_gene_name <-
+  intersect(mouse_limma_FDRq1.00_orth_1n$ortholog_name,
+            pig_brain_FDRq1.00_orth_1n$ortholog_name)
+uniqueToMouse_gene_name <-
+  setdiff(mouse_limma_FDRq1.00_orth_1n$ortholog_name,
+          pig_brain_FDRq1.00_orth_1n$ortholog_name)
+uniqueToPig_gene_name <-
+  setdiff(pig_brain_FDRq1.00_orth_1n$ortholog_name,
+          mouse_limma_FDRq1.00_orth_1n$ortholog_name)
+
+shared_adjPval_1 <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% shared_gene_name,]
+uniqueToMouse <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToMouse_gene_name,]
+uniqueToPig <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToPig_gene_name,]
+
+
+# Venn diagram to see total DEGs between mouse and pig
+x = list(mouse = mouse_limma_FDRq1.00_orth_1n$ortholog_name,
+         pig = pig_brain_FDRq1.00_orth_1n$ortholog_name)
+
+mouse_pig_venn <- ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "purple"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+mouse_pig_venn
+```
+
+## correlation plot - all
+```{r}
+shared_adjPval_1_sub <- subset(shared_adjPval_1, 
+                               (logFC.x < -1.5 & logFC.y < -1.5) | 
+                               (logFC.x > 2.5 & logFC.y > 2.5) | 
+                               (logFC.x > 1 & logFC.y < 1) |
+                              (logFC.x < 1 & logFC.y > 1))
+shared_adjPval_1_sub <- shared_adjPval_1_sub[!grepl("ENSS", shared_adjPval_1_sub$gene_name),]
+corr_plot_adjPval_1 <- ggplot(data = shared_adjPval_1, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 9,
+    ymin = 9,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = -4,
+    ymin = 0,
+    ymax = -4,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = shared_adjPval_1_sub, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 2, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7, margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "All common genes between mouse and pig brains
+adjusted p.value < 1.00",
+  x = expression(paste("mouse ", log[2](FC))),
+  y = expression(paste("pig ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-4, 9, by = 1), limits = c(-4, 9)) +
+  scale_x_continuous(breaks = seq(-4, 9, by = 1), limits = c(-4, 9))
+corr_plot_adjPval_1
+```
+
+
+# AdjPval 0.05 Find shared and unique DEGs between mouse and pig
+```{r}
+# rename GeneName to gene_name to merge data sets and find intersections
+mouse_and_pg_df <-
+  merge(mouse_limma_FDRq1.00_orth_1n, pig_brain_FDRq1.00_orth_1n, by = "ortholog_name")
+
+mouse_limma_FDRq0.05_orth_1n <- subset(mouse_limma_FDRq1.00_orth_1n, adj.P.Val < 0.05)
+pig_brain_FDRq0.05_orth_1n <- subset(pig_brain_FDRq1.00_orth_1n, adj.P.Val < 0.05)
+
+shared_gene_name <-
+  intersect(mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+            pig_brain_FDRq0.05_orth_1n$ortholog_name)
+uniqueToMouse_gene_name <-
+  setdiff(mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+          pig_brain_FDRq0.05_orth_1n$ortholog_name)
+uniqueToPig_gene_name <-
+  setdiff(pig_brain_FDRq0.05_orth_1n$ortholog_name,
+          mouse_limma_FDRq0.05_orth_1n$ortholog_name)
+
+shared <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% shared_gene_name,]
+uniqueToMouse <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToMouse_gene_name,]
+uniqueToPig <-
+  mouse_and_pg_df[mouse_and_pg_df$ortholog_name %in% uniqueToPig_gene_name,]
+
+
+# Venn diagram to see total DEGs between mouse and pig
+x = list(mouse = mouse_limma_FDRq0.05_orth_1n$ortholog_name,
+         pig = pig_brain_FDRq0.05_orth_1n$ortholog_name)
+
+mouse_pig_venn <- ggvenn(
+  x,
+  fill_color = c("#EFC000FF", "purple"),
+  stroke_size = 2,
+  set_name_size = 6
+)
+mouse_pig_venn
+```
+## correlation plot - adj.pval < 0.05
+```{r}
+shared_sub <- subset(shared, 
+                     (logFC.x < 0 & logFC.y < 0) | 
+                     (logFC.x > 2 & logFC.y > 2) | 
+                     (logFC.x > 1 & logFC.y < 1) |
+                     (logFC.x < 1 & logFC.y > 1))
+shared_sub <- shared_sub[!grepl("ENSS", shared_sub$gene_name),]
+
+corr_plot_adjPval_05 <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, text = paste(gene_name))) +
+   annotate(
+    "rect",
+    xmin = 0,
+    xmax = 7,
+    ymin = 7,
+    ymax = 0,
+    fill = "lightpink3",
+    alpha = .5
+  ) +  annotate(
+    "rect",
+    xmin = 0,
+    xmax = -4,
+    ymin = 0,
+    ymax = -4,
+    fill = "cadetblue3",
+    alpha = .5
+  ) +
+  geom_abline(color = "gray40") +
+    geom_text_repel(
+    data = shared_sub, 
+    aes(
+    x = logFC.x, 
+    y = logFC.y,
+    label = gene_name
+    ),
+    color = "black",
+    fontface = "italic",
+    size = 2, 
+    max.overlaps = getOption("ggrepel.max.overlaps", default = 10)
+    ) +
+  geom_point(size = 1) + 
+  theme_bw() +
+  theme(plot.title = element_text(size = 7, margin = margin(0,0,0,0))) +
+  theme(legend.position = "none") +
+  theme(axis.title.x = element_text(size = 6),
+        axis.text.x = element_text(size = 6)) +
+  theme(axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6)) +
+  labs(
+  title = "Shared DEGs between mouse and pig brains
+adjusted p.value < 0.05",
+  x = expression(paste("mouse ", log[2](FC))),
+  y = expression(paste("pig ", log[2](FC)))) +
+  scale_y_continuous(breaks = seq(-4, 7, by = 1), limits = c(-4, 7)) +
+  scale_x_continuous(breaks = seq(-4, 7, by = 1), limits = c(-4, 7))
+corr_plot_adjPval_05
+```
+
+# Upset plot
+```{r}
+mouse_down <- subset(mouse_limma_FDRq0.05_orth_1n, logFC < 0)
+mouse_up <- subset(mouse_limma_FDRq0.05_orth_1n, logFC > 0)
+pig_down <- subset(pig_brain_FDRq0.05_orth_1n, logFC < 0)
+pig_up <- subset(pig_brain_FDRq0.05_orth_1n, logFC > 0)
+
+mouse_down <- mouse_down$ortholog_name
+mouse_up <- mouse_up$ortholog_name
+pig_down <- pig_down$ortholog_name
+pig_up <- pig_up$ortholog_name
+
+list_input <- list("mouse down" = mouse_down,
+                   "pig down" = pig_down,
+                   "pig up" = pig_up,
+                  "mouse up" = mouse_up)
+data <- fromList(list_input)
+
+upset_gene <- upset(data, 
+      c('mouse down','pig down',
+        'mouse up', 'pig up'),
+      themes=upset_modify_themes(
+        list('intersections_matrix'=theme(text=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "cm")),
+          'overall_sizes' = theme(axis.text.x = element_text(size =6), plot.margin = margin(0, 0, 0, 0, "cm")))),
+  queries=list(
+    upset_query(set='mouse down', fill='blue'),
+    upset_query(set='pig down', fill='blue'),
+    upset_query(set='mouse up', fill='red'),
+    upset_query(set='pig up', fill='red'),
+    upset_query(intersect = c('pig down','mouse down'), color='blue',fill='blue', only_components=c('intersections_matrix', 'Intersection size')),
+    upset_query(intersect = c('pig up','mouse up'), color='red',fill='red', only_components=c('intersections_matrix', 'Intersection size'))
+  ),
+  intersections =list(c('mouse down', 'pig down'), 
+                      'pig down', 'mouse down', 
+                      c('mouse up', 'pig up'), 
+                      'pig up', 'mouse up',
+                      c('mouse down', 'pig up'), 
+                      c('mouse up', 'pig down')
+                      ),
+  
+  base_annotations=list(
+    'Intersection size'=(
+        intersection_size(
+        size=1,
+        text = list(size = 2),
+        text_mapping = aes(),
+        bar_number_threshold=1,  # show all numbers on top of bars
+        width=0.3,   # reduce width of the bars
+        mapping=aes(fill='bars_color')
+      )
+      + scale_fill_manual(values=c('grey'), guide='none')
+      + scale_y_continuous(expand=expansion(mult=c(0, 0.1)))
+      + theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          plot.margin = margin(0, 0, 0, 0, "cm"), 
+          axis.line=element_line(colour='black')))),
+  matrix=intersection_matrix(
+      geom=geom_point(
+        shape='circle filled',
+        size=2,
+        stroke=0.45)) +
+        theme(axis.text.y = element_text(size = 6),
+              axis.title.y = element_text(size = 6), 
+              plot.margin = margin(0, 0, 0, 0, "cm")),
+  set_sizes=(
+    upset_set_size(geom=geom_bar(width=0.4), position="right")
+    + theme(axis.line.x=element_line(colour='black'), 
+            axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+            axis.title.x = element_text(size = 6),
+            plot.margin = margin(0, 0, 0, 0, "cm"),
+            axis.ticks.x=element_line())),
+  sort_sets=FALSE,
+  sort_intersections=FALSE)
+upset_gene
+```
+# Metascape Enrichment 
+### Format the dataframes
+```{r}
+# read in enrichment analysis results
+up_enrich_results <-
+  read.delim(
+      "../../../mouse_comparison/results/metascape/up_in_pigs_down_in_mouse.txt",
+    sep = "\t",
+    header = TRUE
+  )
+
+down_enrich_results <-
+  read.delim(
+      "../../../mouse_comparison/results/metascape/down_in_pigs_up_in_mouse.txt",
+    sep = "\t",
+    header = TRUE
+  )
+
+# select the GO term IDs we want to show in the plot
+GO_ID_up <-
+  c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+   # "5_Summary",
+    "6_Summary",
+    "7_Summary",
+    "8_Summary",
+    "9_Summary", 
+    #"10_Summary",
+    "11_Summary",
+    "12_Summary",
+   # "13_Summary",
+   # "14_Summary",
+    "15_Summary",
+  #  "16_Summary",
+    "17_Summary",
+    "18_Summary",
+    "19_Summary"
+  #  "20_Summary"
+  )
+GO_ID_down <- c(
+    "1_Summary",
+    "2_Summary",
+    "3_Summary",
+    "4_Summary",
+    "5_Summary",
+    "6_Summary",
+    "7_Summary"
+   # "8_Summary"
+  )
+
+up_enrich_results_subset <-
+  up_enrich_results[up_enrich_results$GroupID %in% GO_ID_up, ]
+up_enrich_results_subset$Cluster <- c("up-regulated")
+up_enrich_results_subset$Description <-
+  factor(up_enrich_results_subset$Description,
+         levels = up_enrich_results_subset$Description)
+up_enrich_results_subset$Description <-
+  fct_rev(up_enrich_results_subset$Description)
+
+down_enrich_results_subset <-
+  down_enrich_results[down_enrich_results$GroupID %in% GO_ID_down, ]
+down_enrich_results_subset$Cluster <- c("down-regulated")
+down_enrich_results_subset$Description <-
+  factor(down_enrich_results_subset$Description,
+         levels = down_enrich_results_subset$Description)
+down_enrich_results_subset$Description <-
+  fct_rev(down_enrich_results_subset$Description)
+
+# get the number of genes in each summary
+up_gene_count <-
+  strsplit(as.character(up_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+up_gene_count_df <-
+  data.frame(matrix(
+    unlist(up_gene_count),
+    nrow = length(up_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+up_enrich_results_subset$InTerm <- as.numeric(up_gene_count_df$X1)
+up_enrich_results_subset$InList <- as.numeric(up_gene_count_df$X2)
+
+down_gene_count <-
+  strsplit(as.character(down_enrich_results_subset$InTerm_InList),
+           "/",
+           fixed = T)
+down_gene_count_df <-
+  data.frame(matrix(
+    unlist(down_gene_count),
+    nrow = length(down_gene_count),
+    byrow = TRUE
+  ), stringsAsFactors = FALSE)
+down_enrich_results_subset$InTerm <- as.numeric(down_gene_count_df$X1)
+down_enrich_results_subset$InList <- as.numeric(down_gene_count_df$X2)
+
+# combine together
+up_and_down_enrich_results_subset <- rbind(up_enrich_results_subset, down_enrich_results_subset)
+
+#up_and_down_enrich_results_subset$Description <-
+ #     gsub(
+ #       "regulation of plasma membrane bounded cell projection organization",
+#        "reg of plasma membrane/cell projection organization",
+ #       up_and_down_enrich_results_subset$Description
+  #    )
+up_and_down_enrich_results_subset$Description <-
+  factor(up_and_down_enrich_results_subset$Description, levels = unique(up_and_down_enrich_results_subset$Description)) 
+
+up_and_down_enrich_results_subset$Description <- fct_rev(up_and_down_enrich_results_subset$Description)
+```
+
+remove files 
+```{r}
+remove(
+  down_enrich_results,
+  down_gene_count,
+  down_gene_count_df,
+  up_enrich_results,
+  up_gene_count,
+  up_gene_count_df
+)
+```
+
+### Enrichment plot showing log10 P-value
+#### down and up seperately
+```{r}
+down_enrich_plot <-
+  ggplot(data = down_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster) +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .7, position = position_dodge(width = .2)) +
+ ggtitle("shared down DEGs enrichment summaries") +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(x = "Gene count", y = "") +
+  #  xlim(0,60) +
+  guides(fill = guide_legend(
+    size = 1,
+    title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)")
+  )) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-45,0),
+  ) +
+    theme(strip.text = element_text(size = 6), 
+          axis.text.y = element_text(size = 7),
+          axis.text.x = element_text(size = 6), 
+          axis.title.x = element_text(size = 6), 
+          legend.position = "bottom", 
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 6),
+          legend.margin=margin(0,0.5,0,0),
+          legend.box.margin=margin(-10,-2,-10,-7.5), 
+          plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+          plot.title = element_text(size = 7, hjust = -3.25, vjust=0, margin = margin(0,0,0,0)))
+down_enrich_plot
+down_enrich_plot <- addSmallLegend(down_enrich_plot)
+
+
+up_enrich_plot <-
+  ggplot(data = up_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster) +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .7, position = position_dodge(width = .2)) +
+  ggtitle("shared up DEGs enrichment summaries") +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(x = "Gene count", y = "") +
+  guides(fill = guide_legend(title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)"))) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-45,-1)
+  ) +
+    theme(strip.text = element_text(size = 6), 
+          axis.text.y = element_text(size = 7),
+          axis.text.x = element_text(size = 6), 
+          axis.title.x = element_text(size = 6), 
+          legend.position = "bottom", 
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 6),
+          legend.margin=margin(0,0.5,0,0),
+          legend.box.margin=margin(-10,-2,-10,-7.5), 
+          plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+          plot.title = element_text(size = 7, hjust = -3.25, vjust=0, margin = margin(0,0,0,0)))
+up_enrich_plot
+up_enrich_plot <- addSmallLegend(up_enrich_plot)
+```
+
+#### down and up together
+```{r}
+up_and_down_enrich_plot <-
+  ggplot(data = up_and_down_enrich_results_subset, aes(x = InTerm, y = Description)) +
+  ggplot2::facet_grid(~ Cluster, scales = "free") +
+  geom_bar(stat = "identity", aes(fill = LogP), width = .7, position = position_dodge(width = .2)) +
+  theme_bw() +
+  ggtitle(paste0("Pig specific enrichment summaries")) +
+  labs(x = "Gene count", y = NULL) +
+  guides(fill = guide_legend(title = expression(log[10] ~ "(" ~ italic("p") ~ "-value)"))) +
+  scale_fill_gradientn(
+    colours = c("darkmagenta", "mediumorchid3", "grey"),
+    guide = "legend",
+    limits = c(-15,0)
+  ) +
+    theme(strip.text = element_text(size = 6), 
+          axis.text.y = element_text(size = 7),
+          axis.text.x = element_text(size = 6), 
+          axis.title.x = element_text(size = 6), 
+         # legend.position = "top",
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 6),
+          legend.margin=margin(0,0.5,0,0),
+          legend.box.margin=margin(-10,-2,-10,-7.5), 
+          plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+          plot.title = element_text(size = 7, hjust = 12, vjust=0, margin = margin(0,0,1,0)))
+up_and_down_enrich_plot
+
+addSmallLegend <- function(myPlot, pointSize = 3, textSize = 6, spaceLegend = .5) {
+    myPlot +
+        guides(shape = guide_legend(override.aes = list(size = pointSize)),
+               color = guide_legend(override.aes = list(size = pointSize))) +
+        theme(legend.title = element_text(size = textSize), 
+              legend.text  = element_text(size = textSize),
+              legend.key.size = unit(spaceLegend, "lines"))
+}
+
+# Apply on original plot
+up_and_down_enrich_plot <- addSmallLegend(up_and_down_enrich_plot)
+```
+
+# Heatmaps
+```{r}
+mouse_down <- subset(mouse_limma_FDRq0.05_orth_1n, logFC < 0)
+mouse_up <- subset(mouse_limma_FDRq0.05_orth_1n, logFC > 0)
+pig_down <- subset(pig_brain_FDRq0.05_orth_1n, logFC < 0)
+pig_up <- subset(pig_brain_FDRq0.05_orth_1n, logFC > 0)
+
+
+pig_up_mouse_down_ortholog_name <- intersect(pig_up$ortholog_name, mouse_down$ortholog_name)
+pig_down_mouse_up_ortholog_name <- intersect(pig_down$ortholog_name, mouse_up$ortholog_name)
+write.table(pig_down_mouse_up_ortholog_name, 
+            "../../../mouse_comparison/results/pig_down_mouse_up_ortholog_name.txt", 
+            sep = "\t", 
+            quote = FALSE, 
+            row.names = FALSE)
+write.table(pig_up_mouse_down_ortholog_name, 
+            "../../../mouse_comparison/results/pig_up_mouse_down_ortholog_name.txt", 
+            sep = "\t", 
+            quote = FALSE, 
+            row.names = FALSE)
+
+pig_up$species <- c("pig")
+mouse_down$species <- c("mouse")
+pig_down$species <- c("pig")
+mouse_up$species <- c("mouse")
+
+df_pig_up_mouse_down <- smartbind(pig_up, mouse_down)
+df_pig_down_mouse_up <- smartbind(pig_down, mouse_up)
+
+# get the fold change value for those genes
+df_pig_up_mouse_down_sub <- subset(df_pig_up_mouse_down, ortholog_name %in% pig_up_mouse_down_ortholog_name)
+df_pig_down_mouse_up_sub <- subset(df_pig_down_mouse_up, ortholog_name %in% pig_down_mouse_up_ortholog_name)
+
+# order by fold change 
+df_pig_up_mouse_down_sub <- df_pig_up_mouse_down_sub[order(-df_pig_up_mouse_down_sub$logFC),]
+df_pig_up_mouse_down_sub$species <- factor(df_pig_up_mouse_down_sub$species, levels = c("pig", "mouse"))
+
+df_pig_down_mouse_up_sub <- df_pig_down_mouse_up_sub[order(df_pig_down_mouse_up_sub$logFC),]
+df_pig_down_mouse_up_sub$species <- factor(df_pig_down_mouse_up_sub$species, levels = c("pig", "mouse"))
+```
+## up in pigs & down in mouse
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+df_pig_up_mouse_down_sub$ortholog_name <- factor(df_pig_up_mouse_down_sub$ortholog_name,
+                          levels = unique(df_pig_up_mouse_down_sub$ortholog_name))
+df_pig_up_mouse_down_sub$ortholog_name<- fct_rev(df_pig_up_mouse_down_sub$ortholog_name)
+# heatmap 
+heatmap1 <- ggplot(data = df_pig_up_mouse_down_sub, aes(x = species, y = ortholog_name)) +
+  geom_tile(aes(fill = logFC)) +
+  ggplot2::facet_grid(~ species, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "navyblue",
+    mid = "white",
+    high = "maroon",
+    midpoint = 0,
+    space = "rgb",
+    guide = "colourbar",
+  #  breaks = c(-2.5, 0, 4.5),
+   # limits = c(-2.5,4.5),
+    name = expression(log[2](FC))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6, margin = margin(1,0,1.2,0)),
+#    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0.2, 0.5, 0.2, 0.2, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("up-regulated in pigs
+down-regulated in mouse") 
+heatmap1
+
+# Apply on original plot
+heatmap1 <- addSmallLegend(heatmap1)
+```
+## down in pigs & up in mouse
+```{r}
+# lock in gene order which is sorted by adjusted p-value
+df_pig_down_mouse_up_sub$ortholog_name <- factor(df_pig_down_mouse_up_sub$ortholog_name,
+                          levels = unique(df_pig_down_mouse_up_sub$ortholog_name))
+df_pig_down_mouse_up_sub$ortholog_name<- fct_rev(df_pig_down_mouse_up_sub$ortholog_name)
+# heatmap 
+heatmap2 <- ggplot(data = df_pig_down_mouse_up_sub, aes(x = species, y = ortholog_name)) +
+  geom_tile(aes(fill = logFC)) +
+  ggplot2::facet_grid(~ species, scales = "free", switch = "both") +
+  scale_fill_gradient2(
+    low = "navyblue",
+    mid = "white",
+    high = "maroon",
+    midpoint = 0,
+    space = "rgb",
+    guide = "colourbar",
+  #  breaks = c(-3.5, 0, 2.5),
+  #  limits = c(-3.5,2.5),
+    name = expression(log[2](FC))
+  ) +
+  scale_x_discrete(expand = c(0,0)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 6, margin = margin(1,0,1.2,0)),
+   # legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = margin(0.2, 0.5, 0.2, 0.7, "cm"), 
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
+    axis.title.x=element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_blank(), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    ggtitle("down-regulated in pigs
+up-regulated in mouse") 
+heatmap2
+
+heatmap2 <- addSmallLegend(heatmap2)
+```
+
+# Combine plot 
+```{r}
+
+row1 <- 
+    ggarrange(
+    upset_gene,
+    up_and_down_enrich_plot,
+    ncol = 2,
+    nrow = 1, 
+    labels = c("a)", "d)"),
+    widths = c(1, 1.45),
+    font.label = list(size = 8)
+  )
+
+col1 <- ggarrange(
+  corr_plot_adjPval_1,
+  corr_plot_adjPval_05,
+  ncol = 1, 
+  nrow = 2,
+  labels = c("b)", "c)"),
+  font.label = list(size = 8)
+  )
+
+col2 <-
+  ggarrange(
+    heatmap1,
+    heatmap2,
+    nrow = 2,
+    labels = c("e)", "f)"),
+    heights = c(1.75, 1),
+    font.label = list(size = 8)
+  )
+
+row2 <- ggarrange(
+  col1, 
+  col2, 
+  ncol = 2, 
+  widths = c(1.6, 1))
+
+together <- ggarrange(row1, row2, nrow = 2, heights = c(1, 2.4))
+together
+path <- paste0("../../../results/manuscript_figures/Figure_",
+               "mouse_pig",
+               "_correlation_v3")
+saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
+```
+# session info
+```{r}
+```
