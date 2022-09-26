@@ -18,6 +18,8 @@ library(ggplot2movies)
 library(ggpubr)
 library(forcats)
 library(stringr)
+library(ggvenn)
+library(ggrepel)
 ```
 
 ```{r}
@@ -1038,14 +1040,14 @@ row6 <- ggarrange(
   down3_corr_plot, 
   down4_corr_plot, 
   ncol = 4,
-  labels = c("g)", "h)", "i)", "j)"),
+  labels = c("h)", "i)", "j)", "k)"),
   font.label = list(size = 8)
   )
 together <- ggarrange(row1, row4, row2, row3, row5, row6, nrow = 6, heights = c(1.25, 1, .075, 1, .075, .75))
 together
 path <- paste0("../../../results/manuscript_figures/Figure_",
                "shared_DEGs_brain_kidney",
-               "_correlation_v2")
+               "_correlation_v3")
 saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
 ```
 # session info
