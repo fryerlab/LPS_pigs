@@ -286,7 +286,8 @@ corr_plot_shared_DEGs <- ggplot(data = shared, aes(x = logFC.x, y = logFC.y, tex
   theme(axis.title.y = element_text(size = 6),
         axis.text.y = element_text(size = 6)) +
   labs(
-  title = "Shared DEGs between brain and kidney",
+  title = "Shared DEGs between brain and kidney
+adjusted.p.value < 0.05",
   x = expression(paste("kidney ", log[2](FC))),
   y = expression(paste("brain ", log[2](FC)))) +
   scale_y_continuous(breaks = seq(-6, 9, by = 1), limits = c(-6, 9)) +
@@ -1045,9 +1046,9 @@ row6 <- ggarrange(
   )
 together <- ggarrange(row1, row4, row2, row3, row5, row6, nrow = 6, heights = c(1.25, 1, .075, 1, .075, .75))
 together
-path <- paste0("../../../results/manuscript_figures/Figure_",
+path <- paste0("../../../results/manuscript_figures/Figure_5_",
                "shared_DEGs_brain_kidney",
-               "_correlation_v3")
+               "_correlation")
 saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
 ```
 # session info

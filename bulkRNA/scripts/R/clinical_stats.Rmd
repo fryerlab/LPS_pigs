@@ -1,7 +1,7 @@
 ---
 title: "Clinical stats"
 author: "Kimberly Olney & Kennedi Todd"
-date: "October 1st 2021"
+date: "October 1st 2022"
 output: 
   pdf_document: default
   html_document:
@@ -20,6 +20,7 @@ library(reshape)
 library(ggforce)
 library("knitr")
 ```
+
 ```{r}
 saveToPDF <- function(...) {
   d = dev.copy(pdf, ...)
@@ -170,6 +171,43 @@ write.table(clinical_stats,
 ```
 # Violin of heart rate and body temperature 
 ```{r}
+#-- heart rate
+hr_df <- metadata[c("group", "start_heart_rate", "end_heart_rate")]
+hr_df <- melt(hr_df)
+supp.labs <- c("Starting heart rate", "Final heart rate")
+names(supp.labs) <- c("start_heart_rate", "end_heart_rate")
+
+hr_plot <- ggplot(hr_df, aes(x = group, y = value, color = group))  +
+    geom_violin() + scale_color_manual(values = c("black", "purple")) +
+    geom_boxplot(width = 0.1, outlier.size = -1, outlier.shape = NA) +
+    geom_sina(aes(shape = factor(group)),
+                size = 1.5) +
+    ggplot2::facet_grid(~ variable, labeller = labeller(variable = supp.labs)) +
+    theme_bw() +
+  theme(
+    plot.margin = margin(0.1, 0.2, 0, 0.2, "cm"), 
+    strip.text = element_text(size = 6.5, margin = margin(1,0,1.2,0)),
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    panel.spacing = unit(0,'lines'), 
+    plot.title = element_text(size = 7, vjust = -1, hjust = 0),
+    axis.text.x=element_text(size = 6),
+    axis.title.x = element_blank(), 
+    axis.ticks.x=element_blank(), 
+    axis.title.y = element_text(size = 6), 
+    axis.text.y = element_text(size = 6, margin = margin(r = -2)),
+    axis.ticks.y=element_blank()) +
+    labs(
+    y = "beats per minute"
+  ) + ggtitle("Heart rate") + scale_shape_manual(
+      values = c(15, 19)) +
+  scale_y_continuous(breaks = seq(60, 230, by =20), limits = c(60, 250)) 
+hr_plot
+hr_plot <- hr_plot +  theme(panel.spacing.x = unit(0.7, "lines"))
+```
+
+```{r}
 #-- Temp
 temp_df <- metadata[c("group", "start_temp", "end_temp")]
 temp_df <- melt(temp_df)
@@ -178,8 +216,7 @@ names(supp.labs) <- c("start_temp", "end_temp")
 
 temp_plot <- ggplot(temp_df, aes(x = group, y = value, color = group))  +
     geom_violin() + scale_color_manual(values = c("black", "purple")) +
-    geom_boxplot(width = 0.1, outlier.size = -1, outlier.shape = NA) + 
-    stat_compare_means(method = "t.test", size = 2, label.x = 1.2, label.y = 116) +
+    geom_boxplot(width = 0.1, outlier.size = -1, outlier.shape = NA) +
     geom_sina(aes(shape = factor(group)),
                 size = 1.5) +
     ggplot2::facet_grid(~ variable, labeller = labeller(variable = supp.labs)) +
