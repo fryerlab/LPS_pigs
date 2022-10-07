@@ -1241,7 +1241,7 @@ down_GO_2_lcpm_heat <- ggplot(data = GO_2_DEG, aes(x = samples, y = gene)) +
     axis.text.y = element_text(size = 6, margin = margin(r = -2)),
     axis.ticks.y=element_blank()) +
     ggtitle("Signaling by 
-Rho GTPasess")
+Rho GTPases")
 down_GO_2_lcpm_heat
 ```
 ##### down 3
@@ -1509,7 +1509,9 @@ combind
 
 path <- paste0("../../../results/manuscript_figures/Figure_",
                tolower(tissue),
-               "_gene_level_only")
+               "_gene_level_only_v2")
 saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
+```
+```{r}
 ```
 

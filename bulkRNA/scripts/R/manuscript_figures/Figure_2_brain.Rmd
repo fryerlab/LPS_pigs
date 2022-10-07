@@ -151,6 +151,8 @@ goi <-
   treatment_vs_control[treatment_vs_control$gene_name == "GATA2", ]
 goi2 <-
   treatment_vs_control[treatment_vs_control$gene_name == "MARVELD2", ]
+goi3 <-
+  treatment_vs_control[treatment_vs_control$gene_name == "TBX1", ]
 
 hadjpval <- (-log10(max(treatment_vs_control$P.Value[treatment_vs_control$adj.P.Val < 0.05],
                         na.rm = TRUE)))
@@ -266,6 +268,21 @@ gene_volcano <-
            fontface = "italic",
            size = 2,
            nudge_x = 2.65,
+           nudge_y = .75,
+           min.segment.length = unit(0, 'lines'),
+           max.overlaps = getOption("ggrepel.max.overlaps", default = 5)
+         ) +
+         geom_text_repel(
+           data = goi3,
+           aes(
+             x = logFC,
+             y = -log10(P.Value),
+             label = gene_name
+           ),
+           color = "navyblue",
+           fontface = "italic",
+           size = 2,
+           nudge_x = -2.5,
            nudge_y = .75,
            min.segment.length = unit(0, 'lines'),
            max.overlaps = getOption("ggrepel.max.overlaps", default = 5)
@@ -1430,6 +1447,8 @@ combind
 
 path <- paste0("../../../results/manuscript_figures/Figure_",
                tolower(tissue),
-               "_gene_level_only")
+               "_gene_level_only_V2")
 saveToPDF(paste0(path, ".pdf"), width = 7.08, height = 8.66)
+```
+```{r}
 ```
