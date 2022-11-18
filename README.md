@@ -7,8 +7,10 @@ The goal of this experiment is to identify differentially expressed genes (DEGs)
 
 isoform-level differential analysis for:\
 Brain -> https://fryerlab.shinyapps.io/LPS_pigs_brain_isoform/ \
-Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/ \ 
-Blood -> https://fryerlab.shinyapps.io/LPS_pigs_blood_isoform/ \
+Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/ 
+ 
+Blood -> https://fryerlab.shinyapps.io/LPS_pigs_blood_isoform/
+
 
 
 ## Set up conda environment
