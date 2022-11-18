@@ -66,6 +66,13 @@ Open up R and run the R script for gene level differential expression.
 
 `R gene_DE.R`
 
+To run isofrom level differential expression.
 
-### publicly available tools used in this analysis
+`R pseudoalign_isoform_DE.Rmd`
+
+Reprocessing of mouse Kang et al. 2018 data.
+
+`R LPS_mouse_processing.Rmd`
+
+Additional R scripts are for comparing between tissues within the pig data,  and between mouse and pig brain. Scripts for making the manuscript figures are located in the folder called manuscript_figures.
 
