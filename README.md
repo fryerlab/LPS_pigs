@@ -7,11 +7,15 @@ The goal of this experiment is to identify differentially expressed genes (DEGs)
 
 isoform-level differential analysis for:\
 Brain -> https://fryerlab.shinyapps.io/LPS_pigs_brain_isoform/ \
-Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/ 
- 
+Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/  
 Blood -> https://fryerlab.shinyapps.io/LPS_pigs_blood_isoform/
 
+gene-level:\
+pig data -> https://fryerlab.shinyapps.io/pigs_LPS_gene_DE/
+mouse data re-processed from Kang et al. 2018 -> https://fryerlab.shinyapps.io/mouse_LPS_gene_DE/
 
+Correlation of the log2FC between tissues and species:\
+https://fryerlab.shinyapps.io/LPS_correlation_analysis/ 
 
 ## Set up conda environment
 This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
