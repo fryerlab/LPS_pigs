@@ -3,6 +3,14 @@ Bulk RNAseq of Sus scrofa (pigs) that received either saline or bacterial lipopo
 
 The goal of this experiment is to identify differentially expressed genes (DEGs) between experimental groups.  Pigs were injected with saline (control) or lipopolysaccharide (LPS) to model sepsis.  Brain, kidney and blood samples were collected and sent for bulk RNA sequencing.
 
+## Explore differentially expressed genes and isoforms and correlation among tissues in our published shiny apps
+
+isoform-level differential analysis for:\
+Brain -> https://fryerlab.shinyapps.io/LPS_pigs_brain_isoform/ 
+Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/ 
+Blood -> https://fryerlab.shinyapps.io/LPS_pigs_blood_isoform/ 
+
+
 ## Set up conda environment
 This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
 
