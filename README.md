@@ -6,6 +6,7 @@ The goal of this experiment is to identify differentially expressed genes (DEGs)
 ## Explore differentially expressed genes and correlation among tissues in our published shiny app.
 
 https://fryerlab.shinyapps.io/LPS_pigs/
+![Copy of LPS Pig Schematic](https://github.com/fryerlab/LPS_pigs/assets/106278420/81427c09-e53f-472c-8f22-786349ce0db7)
 
 ## Set up conda environment
 This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
