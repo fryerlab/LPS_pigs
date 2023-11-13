@@ -3,29 +3,48 @@ Bulk RNAseq of Sus scrofa (pigs) that received either saline or bacterial lipopo
 
 The goal of this experiment is to identify differentially expressed genes (DEGs) between experimental groups.  Pigs were injected with saline (control) or lipopolysaccharide (LPS) to model sepsis.  Brain, kidney and blood samples were collected and sent for bulk RNA sequencing.
 
-## Explore differentially expressed genes and correlation among tissues in our published shiny app.
+![Copy of LPS Pig Schematic](https://github.com/fryerlab/LPS_pigs/assets/106278420/500135c5-08bd-4258-b4ae-001ad2681cdf)
+
+
+### Explore differentially expressed genes and correlation among tissues in our published shiny app.
 
 https://fryerlab.shinyapps.io/LPS_pigs/
-![Copy of LPS Pig Schematic](https://github.com/fryerlab/LPS_pigs/assets/106278420/81427c09-e53f-472c-8f22-786349ce0db7)
+
 
 ## Set up conda environment
 This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
 
-To create the pigs environment:
+To create the environment:
+```
+conda env create -n pigs --file pigs.yml
 
-`conda env create -f pigs.yml`
+# To activate this environment, use
+#
+#     $ conda activate pigs
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate pigs
 
-To activate the environment once installed:
-`conda activate pigs`
-
+```
 ## bulk RNAseq differential expression
-We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and SALMON. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
+We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and Kallisto. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
 
-### 1. set up project directory structure
-`cd bulkRNA`\
-`mkdir bamstats  featureCounts  kallisto  rObjects  rawQC  rawfastq  results  starAligned  trimmedQC  trimmedReads`\
-`cd results`\
-`mkdir star kallisto`
+### 1. Download fastq files and pig reference genome 
+The raw fastq files may be obtained from SRA PRJNA723823. Samples were sequenced to ~50 million (M) 2 × 100 bp paired-end reads across two lanes. Information on how to download from SRA may be found [here](https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/). 
+
+Download the Sus scrofa (pig) reference genome and reference transcriptome from Ensembl. The version used in this workflow is v7. 
+
+Build the reference genome index:
+```
+STAR --runThreadN 12 --runMode genomeGenerate --genomeDir Sus_scrofa.Sscrofa11.1.dna.toplevel_star_Ymask --genomeFastaFiles Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask.fa --sjdbGTFfile Sus_scrofa.Sscrofa11.1.107.gtf
+```
+
+Build the reference transcriptome index:
+
+```
+kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa
+```
 
 ### 2. align reads and generate quantification estimates
 We ran the data through two pipelines as it has been shown that most of the variation in our data can be explained by the choice of read aligner, see Olney et al. 2020. Therefore, we aligned the reads with star followed by RSEM for quantification and employed the pseudo aligner Kallisto. 
