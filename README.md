@@ -67,34 +67,19 @@ snakemake -s Snakefile
 ```
 
 ### 3. preform differntial expression
-First, you will need to create 
-Move to the results folder. Create sub-directories.
- 
+First, you will need to create sub-directories within the star and kallisto folders found in the results directory. This is where the results from running differential expression will be placed. 
 ```
-cd star
+cd results/star/
 mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom
-```
-
-Move into the kallisto results folder.  Create sub-directories.
-
-```
-cd ../kallisto
+cd ../kallisto/
 mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM
 ```
-
-move to the scripts R folder.\
-`cd ../../scripts/R`\
-read over the gene DE.Rmd file to deteremine which tissue analysis you want to perform (Brain, Kidney, or Blood).
-
-Open up R and run the R script for gene level differential expression. 
-
-`R gene_DE.R`
-
-To run isofrom level differential expression.
-
-`R pseudoalign_isoform_DE.Rmd`
-
-Reprocessing of mouse Kang et al. 2018 data.
+Move to the scripts R folder.
+```
+cd ../../scripts/R/
+R gene_DE.R
+R pseudoalign_isoform_DE.Rmd
+```
 
 `R LPS_mouse_processing.Rmd`
 
