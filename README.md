@@ -77,11 +77,10 @@ mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom
 Move to the scripts R folder.
 ```
 cd ../../scripts/R/
-R gene_DE.R
-R pseudoalign_isoform_DE.Rmd
+R gene_DE.R # gene-level differential expression 
+R pseudoalign_isoform_DE.Rmd # isoform-level differential expression 
+R LPS_mouse_processing.Rmd # processing of the mouse Kang et al. 2017 data
 ```
 
-`R LPS_mouse_processing.Rmd`
-
-Additional R scripts are for comparing between tissues within the pig data,  and between mouse and pig brain. Scripts for making the manuscript figures are located in the folder called manuscript_figures.
+Additional R scripts are for comparing between tissues within the pig data, and between mouse and pig brain. Scripts for making the manuscript figures are located in the folder called manuscript_figures.
 
