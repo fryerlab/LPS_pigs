@@ -56,15 +56,15 @@ pyhon hardmaskY_transcriptome.py
 kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa
 ```
 
-### 2. align reads and generate quantification estimates
-We ran the data through two pipelines as it has been shown that most of the variation in our data can be explained by the choice of read aligner, see Olney et al. 2020. Therefore, we aligned the reads with star followed by RSEM for quantification and employed the pseudo aligner Kallisto. 
-In the snakemake pipeline, the fastq files are trimmed for quality via bbduk package. Information on the specific parameters employed for each step is explained within the snakefile. 
-
-First move to the scripts snakemake folder
-`cd LPS_pigs/bulkRNA/scripts/snakemake/`\
-Now run the snakefile. 
-`snakemake -s Snakefile`\
-To run multiple samples in parallel use -j and the number of jobs to run.
+### 2. Align reads and generate quantification estimates.
+First move to the scripts snakemake folder.
+```
+cd bulkRNA/scripts/snakemake/
+```
+Now run the snakefile. To run multiple samples in parallel use -j and the number of jobs to run.
+```
+snakemake -s Snakefile
+```
 
 ### 3. preform differntial expression
 
