@@ -5,6 +5,7 @@ The goal of this experiment is to identify differentially expressed genes (DEGs)
 
 ![Copy of LPS Pig Schematic](https://github.com/fryerlab/LPS_pigs/assets/106278420/500135c5-08bd-4258-b4ae-001ad2681cdf)
 
+Image created in Biorender by Lauren Tallant of the Fryer lab. 
 
 Explore differentially expressed genes and correlation among tissues in our published [shiny app](https://fryerlab.shinyapps.io/LPS_pigs/)
 
