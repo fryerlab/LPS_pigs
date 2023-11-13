@@ -84,3 +84,9 @@ R LPS_mouse_processing.Rmd # processing of the mouse Kang et al. 2017 data
 
 Additional R scripts are for comparing between tissues within the pig data, and between mouse and pig brain. Scripts for making the manuscript figures are located in the folder called manuscript_figures.
 
+## Contacts
+
+| Contact | Email |
+| --- | --- |
+| Kimberly Olney, PhD | olney.kimberly@mayo.edu |
+| John Fryer, PhD | fryer.john@mayo.edu |
