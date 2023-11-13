@@ -28,11 +28,12 @@ conda env create -n pigs --file pigs.yml
 ## Bulk RNAseq differential expression
 We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and Kallisto. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
 
-### 1. Download fastq files and pig reference genome 
+### 1. Download fastq files and pig reference genome. Create a reference index. 
 The raw fastq files may be obtained from SRA PRJNA723823. Samples were sequenced to ~50 million (M) 2 × 100 bp paired-end reads across two lanes. Information on how to download from SRA may be found [here](https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/). 
 
 Download the Sus scrofa (pig) reference genome, transcriptome, and gene annotation from Ensembl. The version used in this workflow is v7. 
 ```
+cd reference
 wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz
 wget http://ftp.ensembl.org/pub/release-107/fasta/sus_scrofa/cdna/Sus_scrofa.Sscrofa11.1.cdna.all.fa.gz
 wget http://ftp.ensembl.org/pub/release-107/gtf/sus_scrofa/Sus_scrofa.Sscrofa11.1.103.gtf.gz 
@@ -42,6 +43,8 @@ All pigs used in this study are genetically XX female. To avoid mis-mapping of h
 
 Build the reference genome index:
 ```
+python hardmaskY.py
+
 STAR --runThreadN 12 --runMode genomeGenerate --genomeDir Sus_scrofa.Sscrofa11.1.dna.toplevel_star_Ymask --genomeFastaFiles Sus_scrofa.Sscrofa11.1.dna.toplevel.Ymask.fa --sjdbGTFfile Sus_scrofa.Sscrofa11.1.107.gtf
 ```
 
