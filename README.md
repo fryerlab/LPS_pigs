@@ -67,16 +67,20 @@ snakemake -s Snakefile
 ```
 
 ### 3. preform differntial expression
-
-move to the results folder. Create sub directories.
+First, you will need to create 
+Move to the results folder. Create sub-directories.
  
-`cd star`\
-`mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom`
+```
+cd star
+mkidr CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom
+```
 
-move into the kallisto results folder.
+Move into the kallisto results folder.  Create sub-directories.
 
-`cd ../kallisto`\
-`mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM`
+```
+cd ../kallisto
+mkdir CPM  DEGs  JSD  MDS  boxplot  density  gprofiler  metascape  volcano  voom TPM
+```
 
 move to the scripts R folder.\
 `cd ../../scripts/R`\
