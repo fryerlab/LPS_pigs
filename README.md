@@ -3,19 +3,9 @@ Bulk RNAseq of Sus scrofa (pigs) that received either saline or bacterial lipopo
 
 The goal of this experiment is to identify differentially expressed genes (DEGs) between experimental groups.  Pigs were injected with saline (control) or lipopolysaccharide (LPS) to model sepsis.  Brain, kidney and blood samples were collected and sent for bulk RNA sequencing.
 
-## Explore differentially expressed genes and isoforms and correlation among tissues in our published shiny apps
+## Explore differentially expressed genes and correlation among tissues in our published shiny app.
 
-isoform-level differential analysis for:\
-Brain -> https://fryerlab.shinyapps.io/LPS_pigs_brain_isoform/ \
-Kidney -> https://fryerlab.shinyapps.io/LPS_pigs_kidney_isoform/  
-Blood -> https://fryerlab.shinyapps.io/LPS_pigs_blood_isoform/
-
-gene-level:\
-pig data -> https://fryerlab.shinyapps.io/pigs_LPS_gene_DE/
-mouse data re-processed from Kang et al. 2018 -> https://fryerlab.shinyapps.io/mouse_LPS_gene_DE/
-
-Correlation of the log2FC between tissues and species:\
-https://fryerlab.shinyapps.io/LPS_correlation_analysis/ 
+https://fryerlab.shinyapps.io/LPS_pigs/
 
 ## Set up conda environment
 This workflow uses conda. For information on how to install conda, visit: https://docs.conda.io/projects/conda/en/latest/user-guide/index.html 
@@ -28,7 +18,7 @@ To activate the environment once installed:
 `conda activate pigs`
 
 ## bulk RNAseq differential expression
-We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and SALMON, and limma/voom for computing differential expression. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
+We have put together a workflow for inferring differential expression between saline (control) and LPS female pigs using two read aligners STAR and SALMON. These tools are publicly available and we ask that if you use this workflow to cite the tools used listed in the table below. 
 
 ### 1. set up project directory structure
 `cd bulkRNA`\
