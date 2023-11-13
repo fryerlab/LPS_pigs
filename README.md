@@ -51,6 +51,8 @@ STAR --runThreadN 12 --runMode genomeGenerate --genomeDir Sus_scrofa.Sscrofa11.1
 Build the reference transcriptome index:
 
 ```
+pyhon hardmaskY_transcriptome.py
+
 kallisto index -i Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.kallisto.fa Sus_scrofa.Sscrofa11.1.cdna.all.Ymask.fa
 ```
 
