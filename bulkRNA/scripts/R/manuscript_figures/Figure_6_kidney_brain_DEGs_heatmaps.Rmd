@@ -1,5 +1,5 @@
 ---
-title: "Supplemental figure kidney brain heatmaps"
+title: " figure kidney brain heatmaps"
 author: "Kimberly Olney"
 date: "6/14/2022"
 output: html_document
